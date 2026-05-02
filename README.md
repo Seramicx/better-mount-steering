@@ -1,5 +1,7 @@
 # Better Mount Steering
 
+![Showcase](assets/showcase.gif)
+
 Decoupled mount-camera steering and smooth lock-on body rotation for mounted combat. Forge 1.20.1.
 
 ## Features
