@@ -192,7 +192,13 @@ public class MountSteeringHandler {
             return false;
         }
 
-        boolean ssr = IntegrationRegistry.isShoulderSurfing();
+        // SSR is the camera authority only when the user has actually toggled
+        // into SHOULDER_SURFING perspective. In vanilla 3P with SSR merely
+        // loaded, SSR's camera state is stale - reading from it makes the
+        // mount-rotate body yaw drift away from the actual on-screen camera,
+        // producing the per-tick jitter the user sees only when SSR is
+        // installed-but-inactive.
+        boolean ssr = ShoulderSurfingHelper.isShoulderSurfingActive();
         float sourceYaw  = ssr ? ShoulderSurfingHelper.getCameraYaw()  : player.getYRot();
         float sourceXRot = ssr ? ShoulderSurfingHelper.getCameraXRot() : player.getXRot();
 
