@@ -55,6 +55,15 @@ public class MountSteeringHandler {
 
     private static volatile boolean processingMouseTurn = false;
 
+    // Tracked across ticks so we can detect the rising edge into mount-rotate
+    // (a fresh mount). On a fresh mount with movement input, we snap
+    // mountSmoothedYaw straight to bodyYaw — sourceYaw initialization
+    // (camera direction) would otherwise force a 180° back-lerp when
+    // running opposite the camera (e.g., elden_horses summons-and-mounts
+    // while user is doing S-key gallop). Visually that's "horse summons
+    // facing forward, then slow-rotates to running direction" — the bug.
+    private static volatile boolean wasOnMountLastTick = false;
+
     private static float blockedLockOnYRot = Float.NaN;
     private static boolean wasLockingOnLastTick = false;
     private static int postLockOffSmoothingTicks = 0;
@@ -167,15 +176,61 @@ public class MountSteeringHandler {
     }
 
     private static boolean handleMountRotate(LocalPlayer player, Input input) {
+        boolean nowOnMount = isOnMountedMob(player);
+        boolean freshMount = nowOnMount && !wasOnMountLastTick;
+        wasOnMountLastTick = nowOnMount;
+
         mountRotateActive = false;
         if (MC.options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
             deactivateDecouple(player);
             mountSmoothedYaw = Float.NaN;
             return false;
         }
-        if (!isOnMountedMob(player)) {
-            deactivateDecouple(player);
-            mountSmoothedYaw = Float.NaN;
+        if (!nowOnMount) {
+            // Dismount-while-moving in SSR view is the only path where the
+            // existing transition lerp is wrong: it pulls player.yRot from
+            // mountSmoothedYaw (= movement direction at dismount) toward
+            // decoupledCameraYaw (= camera direction during ride) over
+            // ~30 ticks, which makes the on-foot body drift diagonally
+            // because vanilla LivingEntity.tick clamps yBodyRot to ±50°
+            // of yRot. SSR's InputHandler / SprintRotateHandler / vanilla
+            // body rot keep body aligned to movement direction on their
+            // own if we just leave player.yRot at the current value, so
+            // we skip the transition for this specific case.
+            //
+            // For vanilla 3P (with or without SSR loaded but not in SSR
+            // perspective), the existing deactivateDecouple transition is
+            // correct — it preserves camera continuity (no snap) and the
+            // diagonal body symptom is much less pronounced because
+            // vanilla's body rot doesn't use SSR's camera-relative-WASD
+            // rotation model. Keep the existing path there.
+            //
+            // SSR view is also where it's safe to clear decoupleActive
+            // outright: SSR's MixinCamera.setupRotations replaces
+            // vanilla Camera.yRot with SSR's calcRotations whenever
+            // Perspective.SHOULDER_SURFING == Perspective.current(), so
+            // BMS's redirect being off doesn't cause a camera snap. In
+            // vanilla 3P clearing decoupleActive WOULD snap the camera
+            // (BMS's redirect was the only thing keeping camera off
+            // player.yRot), which is why we keep the transition path
+            // for that case.
+            float[] dir = readDirectionalInput(input);
+            float magnitude = Mth.sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
+            boolean userIsMoving = magnitude >= 0.01F;
+            boolean ssrActive = ShoulderSurfingHelper.isShoulderSurfingActive();
+
+            if (ssrActive && userIsMoving) {
+                // Clear *all* state so remount's `if (!decoupleActive)`
+                // re-init branch fires and mountSmoothedYaw gets a fresh
+                // sourceYaw (avoids NaN propagation through smoothAngle).
+                mountRotateActive = false;
+                decoupleActive = false;
+                decoupleTransitioning = false;
+                mountSmoothedYaw = Float.NaN;
+            } else {
+                deactivateDecouple(player);
+                mountSmoothedYaw = Float.NaN;
+            }
             return false;
         }
         if (player.isUsingItem() || player.isBlocking()) {
@@ -226,6 +281,15 @@ public class MountSteeringHandler {
 
         float offsetAngle = -(float) Math.toDegrees(Math.atan2(rawStrafe, rawForward));
         float bodyYaw     = Mth.wrapDegrees(decoupledCameraYaw + offsetAngle);
+
+        // freshMount: just mounted this tick AND moving. Without the snap,
+        // the horse spawns at camera direction (because mountSmoothedYaw
+        // initialized to sourceYaw above), then slow-lerps to bodyYaw when
+        // the user is e.g. doing an S-key gallop summon — the horse visibly
+        // "faces forward" before rotating to running direction.
+        if (freshMount) {
+            mountSmoothedYaw = bodyYaw;
+        }
 
         mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, getMountTurnSpeed());
         player.setYRot(mountSmoothedYaw);
