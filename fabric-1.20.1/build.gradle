@@ -1,0 +1,71 @@
+plugins {
+    id 'fabric-loom' version '1.11-SNAPSHOT'
+    id 'maven-publish'
+}
+
+def fabric_mod_version = '1.0.0'
+version = fabric_mod_version
+group = maven_group
+
+base {
+    archivesName = "${archives_name}-fabric-${fabric_minecraft_version}"
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+    withSourcesJar()
+}
+
+repositories {
+    maven {
+        name = 'Fuzs Mod Resources'
+        url = 'https://raw.githubusercontent.com/Fuzss/modresources/main/maven/'
+    }
+    maven {
+        name = 'ParchmentMC'
+        url = 'https://maven.parchmentmc.org'
+    }
+    maven { url = 'https://cursemaven.com'; content { includeGroup "curse.maven" } }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${fabric_minecraft_version}"
+    mappings loom.layered {
+        officialMojangMappings()
+        parchment("org.parchmentmc.data:parchment-${fabric_minecraft_version}:${parchment_fabric_version}@zip")
+    }
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    modImplementation "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${forgeconfigapiport_fabric_version}"
+}
+
+loom {
+    mixin {
+        defaultRefmapName = 'bettermountsteering.refmap.json'
+    }
+
+    runs {
+        client {
+            client()
+            ideConfigGenerated = true
+            runDir = 'run'
+        }
+    }
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    inputs.property "version", fabric_mod_version
+    filesMatching("fabric.mod.json") {
+        expand "version": fabric_mod_version
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'MixinConfigs': 'bettermountsteering.mixins.json'
+        ])
+    }
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

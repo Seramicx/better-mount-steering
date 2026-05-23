@@ -1,0 +1,21 @@
+{
+    "required": true,
+    "minVersion": "0.8.5",
+    "package": "com.bettermountsteering.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "mixins": [
+        "MixinEntityTurnDecouple",
+        "MixinLivingEntityRiddenInterp"
+    ],
+    "client": [
+        "MixinCameraDecouple",
+        "MixinControllableCameraTurn",
+        "MixinLocalPlayerInputOverride",
+        "MixinMouseHandlerProcessing",
+        "MixinSsrSuppressFollowDuringMountRotate",
+        "MixinSsrSuppressTurnSnapback"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}
