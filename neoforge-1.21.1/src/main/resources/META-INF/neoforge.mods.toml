@@ -1,0 +1,50 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "bettermountsteering"
+version = "${mod_version}"
+displayName = "Better Mount Steering"
+authors = "Seramicx"
+description = '''
+Mount steering with camera/body decoupling. Press WASD/right-stick on a mount to steer; mouse and camera remain free.
+'''
+
+[[mixins]]
+config = "bettermountsteering.mixins.json"
+
+[[dependencies.bettermountsteering]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.bettermountsteering]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.bettermountsteering]]
+modId = "epicfight"
+type = "optional"
+versionRange = "[0,)"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies.bettermountsteering]]
+modId = "shouldersurfing"
+type = "optional"
+versionRange = "[0,)"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies.bettermountsteering]]
+modId = "controllable"
+type = "optional"
+versionRange = "[0,)"
+ordering = "AFTER"
+side = "CLIENT"

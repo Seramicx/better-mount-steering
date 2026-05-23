@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "bettermountsteering",
+  "version": "${version}",
+  "name": "Better Mount Steering",
+  "description": "Mount steering with camera/body decoupling. Press WASD/right-stick on a mount to steer; mouse and camera remain free.",
+  "authors": ["Seramicx"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.bettermountsteering.fabric.BetterMountSteeringClient"]
+  },
+  "mixins": [
+    {
+      "config": "bettermountsteering.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "forgeconfigapiport": ">=8.0.0"
+  }
+}
