@@ -12,15 +12,11 @@ Decoupled mount-camera steering and smooth lock-on body rotation for mounted com
 - Shoulder Surfing Reloaded support. While mount-rotate is active, suppresses SSR's `followPlayerRotations` lerp so the camera doesn't drag toward the mount's steering direction.
 - Controllable support. The right stick drives the decoupled mount camera the same way the mouse does.
 
-### Forge 1.20.1 only
+### Forge 1.20.1 and NeoForge 1.21.1
 
 - Smooth body rotation during Better Lockon mount lock-on. By default, BLO's mount lock-on snaps your body between 8 fixed sprint directions every tick, which feels rigid on a horse. This replaces the snap with a proportional ease-out lerp so the body smoothly trails the locked target.
 - Lock-off flicker fix. BLO holds onto its lock-on camera transform for a few ticks after you release lock-on, which produces a brief visible flicker when you're mounted. This forces BLO to release the camera immediately, so lock-off is clean.
 - Epic Fight TPS mode support. Cancels EF's TPS camera while mount-rotate is decoupled, then hands control back when you dismount or stop steering.
-
-### NeoForge 1.21.1
-
-- Epic Fight TPS mode support (same as Forge).
 
 ## Config
 
@@ -28,7 +24,7 @@ Decoupled mount-camera steering and smooth lock-on body rotation for mounted com
 
 - `mountTurnSpeed` - per-tick body lerp factor while mount-rotating (default `0.25`). Lower = smoother / slower body turn. Higher = snappier.
 
-Forge 1.20.1 also exposes:
+Forge 1.20.1 and NeoForge 1.21.1 also expose:
 
 - `smoothLockOnMountTurn` - whether to smooth Better Lockon's mount lock-on instead of letting it snap (default `true`). Set to `false` if you want BLO's vanilla snap behavior back.
 - `bloLockOnTurnSmoothness` - per-tick lerp factor for body yaw during BLO + mount lock-on (default `0.5`). `0.10` = very smooth with a long trail behind the target. `0.5` = balanced. `0.85` = responsive. `1.0` = no smoothing (BLO's snap passes through unchanged).
@@ -44,7 +40,7 @@ Forge 1.20.1 also exposes:
 Optional and auto-detected:
 
 - Forge 1.20.1: Better Lockon, Epic Fight, Shoulder Surfing Reloaded, Controllable.
-- NeoForge 1.21.1: Epic Fight, Shoulder Surfing Reloaded, Controllable.
+- NeoForge 1.21.1: Better Lockon, Epic Fight, Shoulder Surfing Reloaded, Controllable.
 - Fabric 1.20.1: Shoulder Surfing Reloaded, Controllable.
 
 ## Manual install

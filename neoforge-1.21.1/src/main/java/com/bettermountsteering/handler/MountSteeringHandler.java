@@ -2,8 +2,10 @@ package com.bettermountsteering.handler;
 
 import com.bettermountsteering.BetterMountSteeringConfig;
 import com.bettermountsteering.BetterMountSteeringMod;
+import com.bettermountsteering.compat.BLOTransitionSkipHook;
 import com.bettermountsteering.compat.ControllableHelper;
 import com.bettermountsteering.compat.EpicFightHelper;
+import com.bettermountsteering.compat.IntegrationRegistry;
 import com.bettermountsteering.compat.ShoulderSurfingHelper;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
@@ -16,19 +18,24 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 /**
- * Mount-rotate (third-person, riding a Mob, BTP-style camera/body decoupling).
+ * Mount-rotate (third-person, riding a Mob, BTP-style camera/body decoupling)
+ * + BLO+mount lock-on smoothing.
  *
- * <p>While active, mouse/right-stick deltas route to {@code decoupledCameraYaw}
- * (via {@code MixinEntityTurnDecouple}), and {@code Camera.setup} reads from
- * there (via {@code MixinCameraDecouple}). {@code player.yRot} is pinned at
- * {@code mountSmoothedYaw} so the mount steers there.
+ * <p><b>Mount-rotate (no lock-on):</b> while active, mouse/right-stick deltas
+ * route to {@code decoupledCameraYaw} (via {@code MixinEntityTurnDecouple}),
+ * and {@code Camera.setup} reads from there (via {@code MixinCameraDecouple}).
+ * {@code player.yRot} is pinned at {@code mountSmoothedYaw} so the mount
+ * steers there.
  *
- * <p>BLO-specific lock-on smoothing dropped on NF 1.21.1 — Better Lock On has
- * no 1.21.1 release.
+ * <p><b>BLO+mount lock-on smoothing:</b> while BLO is locked on AND riding a
+ * vanilla-controlled mount, replace BLO's discrete 8-direction snap on
+ * {@code player.yRot} with a per-tick proportional lerp. Body trails the
+ * locked target smoothly while BLO's camera tracks the target as usual.
  */
 @EventBusSubscriber(modid = BetterMountSteeringMod.MODID, value = Dist.CLIENT)
 public class MountSteeringHandler {
@@ -48,6 +55,11 @@ public class MountSteeringHandler {
     private static volatile boolean processingMouseTurn = false;
 
     private static volatile boolean wasOnMountLastTick = false;
+
+    private static float blockedLockOnYRot = Float.NaN;
+    private static boolean wasLockingOnLastTick = false;
+    private static int postLockOffSmoothingTicks = 0;
+    private static final int POST_LOCKOFF_DURATION = 15;
 
     public static boolean isMountRotateActive() { return mountRotateActive; }
     public static float   getMountSmoothedYaw() { return mountSmoothedYaw; }
@@ -69,6 +81,16 @@ public class MountSteeringHandler {
     private static float getMountTurnSpeed() {
         try { return (float) BetterMountSteeringConfig.MOUNT_TURN_SPEED.get().doubleValue(); }
         catch (Exception e) { return 0.25F; }
+    }
+
+    private static boolean getSmoothLockOnMountTurn() {
+        try { return BetterMountSteeringConfig.SMOOTH_LOCKON_MOUNT_TURN.get(); }
+        catch (Exception e) { return true; }
+    }
+
+    private static float getBloLockOnTurnSmoothness() {
+        try { return (float) BetterMountSteeringConfig.BLO_LOCKON_TURN_SMOOTHNESS.get().doubleValue(); }
+        catch (Exception e) { return 0.50F; }
     }
 
     private static boolean isOnMountedMob(LocalPlayer player) {
@@ -258,6 +280,58 @@ public class MountSteeringHandler {
                 player.yBodyRot = newYRot;
                 player.yHeadRot = newYRot;
             }
+        }
+    }
+
+    /**
+     * BLO+mount lock-on smoothing. Runs after BLO snaps {@code player.yRot} to
+     * the locked-target direction. Lerps body yaw toward what BLO wrote and
+     * writes back; next tick's mount steering reads the smoothed value.
+     *
+     * <p>Lower {@code bloLockOnTurnSmoothness} = longer trail.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onClientTickEnd(ClientTickEvent.Post event) {
+        LocalPlayer player = MC.player;
+        if (player == null) return;
+
+        boolean isLockingOnNow = EpicFightHelper.isLockOnTargeting();
+        boolean lockOffEdge = wasLockingOnLastTick && !isLockingOnNow;
+        wasLockingOnLastTick = isLockingOnNow;
+
+        // Lock-off edge fix (mounted only): force BLO to release its lock-on
+        // camera transform immediately, then keep smoothing engaged for a few
+        // ticks so body eases to BLO's snap target.
+        if (lockOffEdge && isOnMountedMob(player)) {
+            BLOTransitionSkipHook.skipPostLockOff();
+            postLockOffSmoothingTicks = POST_LOCKOFF_DURATION;
+        }
+
+        boolean shouldSmooth = getSmoothLockOnMountTurn()
+                && IntegrationRegistry.isBetterLockOn()
+                && isOnMountedMob(player)
+                && (isLockingOnNow || postLockOffSmoothingTicks > 0);
+
+        if (shouldSmooth) {
+            float current = player.getYRot();
+            if (Float.isNaN(blockedLockOnYRot)) {
+                blockedLockOnYRot = current;
+            } else {
+                float smoothed = smoothAngle(blockedLockOnYRot, current, getBloLockOnTurnSmoothness());
+                player.setYRot(smoothed);
+                player.yRotO = smoothed;
+                player.yBodyRot = smoothed;
+                player.yBodyRotO = smoothed;
+                player.yHeadRot = smoothed;
+                player.yHeadRotO = smoothed;
+                blockedLockOnYRot = smoothed;
+            }
+            if (!isLockingOnNow && postLockOffSmoothingTicks > 0) {
+                postLockOffSmoothingTicks--;
+            }
+        } else {
+            blockedLockOnYRot = Float.NaN;
+            postLockOffSmoothingTicks = 0;
         }
     }
 }
