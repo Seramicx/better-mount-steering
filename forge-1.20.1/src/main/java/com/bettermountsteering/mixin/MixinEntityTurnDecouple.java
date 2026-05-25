@@ -9,14 +9,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Captures user-driven mouse-turn deltas during {@code Entity.turn} and routes
- * them to {@link MountSteeringHandler#addCameraDelta} while decouple is
- * active and the call originates from the user's input path
- * (gated by {@link MountSteeringHandler#isProcessingMouseTurn}). Then
- * restores the entity's pre-turn yRot/xRot so {@code player.yRot} stays
- * pinned at body direction.
- */
 @Mixin(Entity.class)
 public abstract class MixinEntityTurnDecouple {
 

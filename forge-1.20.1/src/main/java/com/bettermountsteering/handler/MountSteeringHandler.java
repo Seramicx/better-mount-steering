@@ -21,23 +21,6 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/**
- * Mount-rotate (third-person, riding a Mob, BTP-style camera/body decoupling)
- * + the new BLO+mount lock-on smoothing.
- *
- * <p><b>Mount-rotate (no lock-on):</b> while active, mouse/right-stick deltas
- * route to {@code decoupledCameraYaw} (via {@code MixinEntityTurnDecouple}),
- * and {@code Camera.setup} reads from there (via {@code MixinCameraDecouple}).
- * {@code player.yRot} is set persistently to {@code mountSmoothedYaw} so the
- * mount steers there and the server agrees (no rotation snap-back).
- *
- * <p><b>BLO+mount lock-on smoothing:</b> while BLO is locked
- * on AND riding a vanilla-controlled mount, replace BLO's discrete 8-direction
- * snap on {@code player.yRot} with a per-tick yaw clamp (uses
- * {@code mountTurnSpeed}). Body trails the locked target smoothly while BLO's
- * camera tracks the target as usual. Skipped when not locked on so BLO's
- * free-turn behavior is untouched.
- */
 @Mod.EventBusSubscriber(modid = BetterMountSteeringMod.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class MountSteeringHandler {
 
@@ -55,16 +38,11 @@ public class MountSteeringHandler {
 
     private static volatile boolean processingMouseTurn = false;
 
-    // Rising-edge tracker for fresh mounts. On a fresh mount with movement
-    // input, snap mountSmoothedYaw straight to bodyYaw — sourceYaw init
-    // (camera direction) would otherwise force a 180° back-lerp when
-    // running opposite the camera (e.g. S-key gallop during summon-and-mount).
     private static volatile boolean wasOnMountLastTick = false;
 
     private static float blockedLockOnYRot = Float.NaN;
     private static boolean wasLockingOnLastTick = false;
     private static int postLockOffSmoothingTicks = 0;
-    private static final int POST_LOCKOFF_DURATION = 15;
 
     public static boolean isMountRotateActive() { return mountRotateActive; }
     public static float   getMountSmoothedYaw() { return mountSmoothedYaw; }
@@ -108,12 +86,6 @@ public class MountSteeringHandler {
         return from + delta * factor;
     }
 
-    /**
-     * Raw keyboard state with controller analog fallback. Bypasses
-     * {@code input.forwardImpulse/leftImpulse} because SSR's decoupled mode
-     * rotates those to align WASD with the camera, which would corrupt the
-     * {@code atan2(strafe, forward)} body-yaw calculation.
-     */
     private static float[] readDirectionalInput(Input input) {
         float rawForward = 0F;
         if (MC.options.keyUp.isDown())   rawForward += 1.0F;
@@ -123,9 +95,6 @@ public class MountSteeringHandler {
         if (MC.options.keyLeft.isDown())  rawStrafe += 1.0F;
         if (MC.options.keyRight.isDown()) rawStrafe -= 1.0F;
 
-        // Controllable updates input.forwardImpulse/leftImpulse but not the
-        // keyboard isDown() states. Fall back to analog when no keys are
-        // pressed so controller users still get mount-rotate.
         if (rawForward == 0F && rawStrafe == 0F) {
             float[] analog = ControllableHelper.readAnalogDirection(input);
             rawForward = analog[0];
@@ -154,10 +123,12 @@ public class MountSteeringHandler {
         LocalPlayer player = MC.player;
         if (player == null) return;
 
-        // Lock-on path takes priority. Skip mount-rotate during lock-on;
-        // post-tick smoothing in onClientTickEnd still applies for BLO+mount.
         if (EpicFightHelper.isLockOnTargeting()) {
             if (decoupleActive) {
+                player.setYRot(decoupledCameraYaw);
+                player.yRotO = decoupledCameraYaw;
+                player.setXRot(decoupledCameraXRot);
+                player.xRotO = decoupledCameraXRot;
                 decoupleActive = false;
                 decoupleTransitioning = false;
                 mountRotateActive = false;
@@ -181,23 +152,12 @@ public class MountSteeringHandler {
             return false;
         }
         if (!nowOnMount) {
-            // Dismount-while-moving in SSR view: skip the transition lerp.
-            // It would pull player.yRot from movement direction toward camera
-            // direction over ~30 ticks, but LivingEntity.tick clamps yBodyRot
-            // to ±50° of yRot → on-foot body drifts diagonally.
-            // SSR view is also safe to clear decoupleActive outright because
-            // SSR's MixinCamera.setupRotations owns the camera transform in
-            // that perspective. Vanilla 3P still needs the transition path
-            // (BMS's redirect is the only thing decoupling camera from yRot).
             float[] dir = readDirectionalInput(input);
             float magnitude = Mth.sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
             boolean userIsMoving = magnitude >= 0.01F;
             boolean ssrActive = ShoulderSurfingHelper.isShoulderSurfingActive();
 
             if (ssrActive && userIsMoving) {
-                // Clear *all* state so remount's `if (!decoupleActive)`
-                // re-init branch fires and mountSmoothedYaw gets a fresh
-                // sourceYaw (avoids NaN propagation through smoothAngle).
                 mountRotateActive = false;
                 decoupleActive = false;
                 decoupleTransitioning = false;
@@ -222,9 +182,8 @@ public class MountSteeringHandler {
             return false;
         }
 
-        // Only read SSR's camera state when actually in SSR perspective.
-        // In vanilla 3P with SSR loaded-but-inactive, its state is stale →
-        // body-yaw drifts off-camera (per-tick jitter).
+        boolean justExitedLockOn = Float.isNaN(mountSmoothedYaw);
+
         boolean ssr = ShoulderSurfingHelper.isShoulderSurfingActive();
         float sourceYaw  = ssr ? ShoulderSurfingHelper.getCameraYaw()  : player.getYRot();
         float sourceXRot = ssr ? ShoulderSurfingHelper.getCameraXRot() : player.getXRot();
@@ -254,10 +213,10 @@ public class MountSteeringHandler {
         float offsetAngle = -(float) Math.toDegrees(Math.atan2(rawStrafe, rawForward));
         float bodyYaw     = Mth.wrapDegrees(decoupledCameraYaw + offsetAngle);
 
-        // Fresh mount with movement: snap to bodyYaw, otherwise the mount
-        // spawns facing the camera direction and slow-lerps to body direction.
         if (freshMount) {
             mountSmoothedYaw = bodyYaw;
+        } else if (justExitedLockOn) {
+            mountSmoothedYaw = Float.isNaN(blockedLockOnYRot) ? bodyYaw : blockedLockOnYRot;
         }
 
         mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, getMountTurnSpeed());
@@ -283,7 +242,6 @@ public class MountSteeringHandler {
         LocalPlayer player = MC.player;
         if (player == null || event.player != player) return;
 
-        // Re-apply body yaw after BLO/EF/etc. may have rewritten yRot.
         if (mountRotateActive) {
             player.setYRot(mountSmoothedYaw);
             player.yBodyRot = mountSmoothedYaw;
@@ -291,9 +249,6 @@ public class MountSteeringHandler {
         }
 
         if (decoupleActive && decoupleTransitioning) {
-            // Refresh the lerp target each tick from live SSR camera. Without
-            // this, mouse moves during the transition leave the body lerping
-            // to the camera position at the moment input dropped to 0.
             if (ShoulderSurfingHelper.isShoulderSurfingActive()) {
                 decoupledCameraYaw = ShoulderSurfingHelper.getCameraYaw();
                 decoupledCameraXRot = ShoulderSurfingHelper.getCameraXRot();
@@ -321,21 +276,8 @@ public class MountSteeringHandler {
             }
         }
 
-        // BLO+mount lock-on smoothing runs in onClientTickEnd, not here:
-        // BLO writes player.yRot in ClientTickEvent.Post (after PlayerTickEvent),
-        // so anything smoothed here would be overwritten before mount.travelRidden
-        // reads it next tick.
     }
 
-    /**
-     * BLO+mount lock-on smoothing. Runs after BLO's {@code rewroteClientTick}
-     * snaps {@code player.yRot} to the locked-target direction. Lerps body yaw
-     * toward what BLO wrote and writes back; next tick's
-     * {@code mount.travelRidden} reads the smoothed value as steering input.
-     *
-     * <p>Proportional lerp gives an ease-out feel; a hard clamp would feel
-     * mechanical. Lower {@code bloLockOnTurnSmoothness} = longer trail.
-     */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onClientTickEnd(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -346,21 +288,26 @@ public class MountSteeringHandler {
         boolean lockOffEdge = wasLockingOnLastTick && !isLockingOnNow;
         wasLockingOnLastTick = isLockingOnNow;
 
-        // Lock-off edge fix (mounted only): BLO snaps player.yRot to camera
-        // yaw and its post-lock-off transition timers keep the lock-on camera
-        // transform engaged for a beat → visible flicker.
-        // 1. Skip BLO's transition timers via reflection to release the
-        //    transform immediately.
-        // 2. Keep our smoothing engaged for POST_LOCKOFF_DURATION ticks so
-        //    body eases to BLO's snap target instead of jumping.
         if (lockOffEdge && isOnMountedMob(player)) {
             BLOTransitionSkipHook.skipPostLockOff();
-            postLockOffSmoothingTicks = POST_LOCKOFF_DURATION;
+            if (mountRotateActive) {
+                player.setYRot(mountSmoothedYaw);
+                player.yRotO = mountSmoothedYaw;
+                player.yBodyRot = mountSmoothedYaw;
+                player.yBodyRotO = mountSmoothedYaw;
+                player.yHeadRot = mountSmoothedYaw;
+                player.yHeadRotO = mountSmoothedYaw;
+                blockedLockOnYRot = Float.NaN;
+                postLockOffSmoothingTicks = 0;
+                return;
+            }
+            postLockOffSmoothingTicks = 15;
         }
 
         boolean shouldSmooth = getSmoothLockOnMountTurn()
                 && IntegrationRegistry.isBetterLockOn()
                 && isOnMountedMob(player)
+                && !mountRotateActive
                 && (isLockingOnNow || postLockOffSmoothingTicks > 0);
 
         if (shouldSmooth) {

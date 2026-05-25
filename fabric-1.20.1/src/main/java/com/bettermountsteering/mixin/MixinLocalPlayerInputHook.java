@@ -7,12 +7,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Fabric equivalent of Forge's MovementInputUpdateEvent. Injects after
- * Input.tick() in LocalPlayer.aiStep so mount-rotate can read the user's
- * fresh-this-tick input and overwrite forwardImpulse/leftImpulse before
- * the mount travels next tick.
- */
 @Mixin(LocalPlayer.class)
 public abstract class MixinLocalPlayerInputHook {
 

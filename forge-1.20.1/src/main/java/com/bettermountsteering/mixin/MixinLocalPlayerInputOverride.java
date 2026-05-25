@@ -7,12 +7,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Force-applies the mount-rotate input magnitude at HEAD of
- * {@code serverAiStep}, after any lower-priority mod may have rewritten the
- * impulses during {@code MovementInputUpdateEvent}. Without this, the mount
- * steers with the wrong magnitude when other handlers also modify input.
- */
 @Mixin(LocalPlayer.class)
 public abstract class MixinLocalPlayerInputOverride {
 

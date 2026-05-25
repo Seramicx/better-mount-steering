@@ -7,11 +7,6 @@ import org.slf4j.Logger;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-/**
- * Reflection-only SSR access (SSR is an optional dep). When SSR is loaded,
- * mount-rotate reads the camera yaw from SSR; otherwise falls back to
- * {@code player.yRot} which equals the camera in coupled mode.
- */
 public final class ShoulderSurfingHelper {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -91,15 +86,6 @@ public final class ShoulderSurfingHelper {
         return Minecraft.getInstance().gameRenderer.getMainCamera().getXRot();
     }
 
-    /**
-     * Overwrite SSR's internal {@code lastMovedYRot} on the active camera.
-     * SSR only updates this field while the player is moving; when our
-     * decouple transition finishes, the field is stale at the body-offset
-     * yaw, and SSR's next idle turn clamps player.yRot toward it
-     * ({@code Mth.approachDegrees(lastMovedYRot, player.yRot+delta, limit)}).
-     * Writing this to the current player yaw at transition completion
-     * neutralizes the clamp.
-     */
     public static void setLastMovedYRot(float value) {
         resolve();
         if (getInstanceMethod == null || lastMovedYRotField == null) return;

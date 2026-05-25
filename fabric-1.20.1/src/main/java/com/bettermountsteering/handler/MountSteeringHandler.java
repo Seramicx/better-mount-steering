@@ -11,14 +11,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 
-/**
- * Fabric variant: mount-rotate (third-person, riding a Mob, BTP-style
- * camera/body decoupling). EF/BLO lock-on smoothing is not included on
- * Fabric (no EF, no BLO releases for this loader).
- *
- * <p>Entry points are static so loader-side code can dispatch them from
- * mixin (input) and ClientTickEvents.END_CLIENT_TICK (post-tick).
- */
 public final class MountSteeringHandler {
 
     private static final Minecraft MC = Minecraft.getInstance();
@@ -103,8 +95,6 @@ public final class MountSteeringHandler {
         mountRotateActive = false;
     }
 
-    /** Called from MixinLocalPlayerInputHook after Input.tick — Fabric's equivalent
-     *  of Forge's MovementInputUpdateEvent.LOWEST. */
     public static void onMovementInput(LocalPlayer player, Input input) {
         handleMountRotate(player, input);
     }
@@ -199,7 +189,6 @@ public final class MountSteeringHandler {
         return true;
     }
 
-    /** Called at END_CLIENT_TICK — equivalent of Forge's PlayerTickEvent.END. */
     public static void onPlayerTickPost(LocalPlayer player) {
         if (mountRotateActive) {
             player.setYRot(mountSmoothedYaw);

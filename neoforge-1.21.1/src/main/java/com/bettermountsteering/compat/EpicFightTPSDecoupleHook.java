@@ -7,13 +7,6 @@ import yesman.epicfight.api.client.event.EpicFightClientEventHooks;
 import yesman.epicfight.api.client.event.types.camera.ActivateTPSCamera;
 import yesman.epicfight.api.event.subscription.DefaultEventSubscription;
 
-/**
- * Cancels EF's TPS camera mode while mount-rotate decouple is active so EF
- * defers to vanilla camera and our decouple mixins take over.
- *
- * <p>Gated by {@link IntegrationRegistry#isEpicFight()} at caller — this
- * class is never loaded when EF is absent.
- */
 public final class EpicFightTPSDecoupleHook {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -28,7 +21,7 @@ public final class EpicFightTPSDecoupleHook {
 
         try {
             DefaultEventSubscription<ActivateTPSCamera> sub = event -> {
-                if (MountSteeringHandler.isMountRotateActive()) {
+                if (MountSteeringHandler.isDecoupleActive()) {
                     event.cancel();
                 }
             };

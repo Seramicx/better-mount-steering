@@ -6,7 +6,7 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.74'
 }
 
-def neoforge_mod_version = '1.0.1'
+def neoforge_mod_version = '1.0.0'
 version = neoforge_mod_version
 group = maven_group
 
@@ -53,12 +53,8 @@ neoForge {
 }
 
 dependencies {
-    // Epic Fight 21.17.2-mc1.21.1-neoforge (Antikythera-Studios fork)
     compileOnly "curse.maven:epic-fight-mod-405076:8080214"
-    // Shoulder Surfing Reloaded 4.22.10 (1.21.1)
     compileOnly "curse.maven:shoulder-surfing-reloaded-243190:8043996"
-    // Controllable: not on cursemaven yet (file 7411284); @Pseudo mixin
-    // resolves class by string at runtime, no compile-time dep needed.
 }
 
 tasks.named('processResources', ProcessResources).configure {

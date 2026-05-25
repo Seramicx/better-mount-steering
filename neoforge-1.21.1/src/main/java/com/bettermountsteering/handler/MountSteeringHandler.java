@@ -22,21 +22,6 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
-/**
- * Mount-rotate (third-person, riding a Mob, BTP-style camera/body decoupling)
- * + BLO+mount lock-on smoothing.
- *
- * <p><b>Mount-rotate (no lock-on):</b> while active, mouse/right-stick deltas
- * route to {@code decoupledCameraYaw} (via {@code MixinEntityTurnDecouple}),
- * and {@code Camera.setup} reads from there (via {@code MixinCameraDecouple}).
- * {@code player.yRot} is pinned at {@code mountSmoothedYaw} so the mount
- * steers there.
- *
- * <p><b>BLO+mount lock-on smoothing:</b> while BLO is locked on AND riding a
- * vanilla-controlled mount, replace BLO's discrete 8-direction snap on
- * {@code player.yRot} with a per-tick proportional lerp. Body trails the
- * locked target smoothly while BLO's camera tracks the target as usual.
- */
 @EventBusSubscriber(modid = BetterMountSteeringMod.MODID, value = Dist.CLIENT)
 public class MountSteeringHandler {
 
@@ -59,7 +44,6 @@ public class MountSteeringHandler {
     private static float blockedLockOnYRot = Float.NaN;
     private static boolean wasLockingOnLastTick = false;
     private static int postLockOffSmoothingTicks = 0;
-    private static final int POST_LOCKOFF_DURATION = 15;
 
     public static boolean isMountRotateActive() { return mountRotateActive; }
     public static float   getMountSmoothedYaw() { return mountSmoothedYaw; }
@@ -142,6 +126,10 @@ public class MountSteeringHandler {
 
         if (EpicFightHelper.isLockOnTargeting()) {
             if (decoupleActive) {
+                player.setYRot(decoupledCameraYaw);
+                player.yRotO = decoupledCameraYaw;
+                player.setXRot(decoupledCameraXRot);
+                player.xRotO = decoupledCameraXRot;
                 decoupleActive = false;
                 decoupleTransitioning = false;
                 mountRotateActive = false;
@@ -195,6 +183,8 @@ public class MountSteeringHandler {
             return false;
         }
 
+        boolean justExitedLockOn = Float.isNaN(mountSmoothedYaw);
+
         boolean ssr = ShoulderSurfingHelper.isShoulderSurfingActive();
         float sourceYaw  = ssr ? ShoulderSurfingHelper.getCameraYaw()  : player.getYRot();
         float sourceXRot = ssr ? ShoulderSurfingHelper.getCameraXRot() : player.getXRot();
@@ -226,6 +216,8 @@ public class MountSteeringHandler {
 
         if (freshMount) {
             mountSmoothedYaw = bodyYaw;
+        } else if (justExitedLockOn) {
+            mountSmoothedYaw = Float.isNaN(blockedLockOnYRot) ? bodyYaw : blockedLockOnYRot;
         }
 
         mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, getMountTurnSpeed());
@@ -283,13 +275,6 @@ public class MountSteeringHandler {
         }
     }
 
-    /**
-     * BLO+mount lock-on smoothing. Runs after BLO snaps {@code player.yRot} to
-     * the locked-target direction. Lerps body yaw toward what BLO wrote and
-     * writes back; next tick's mount steering reads the smoothed value.
-     *
-     * <p>Lower {@code bloLockOnTurnSmoothness} = longer trail.
-     */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onClientTickEnd(ClientTickEvent.Post event) {
         LocalPlayer player = MC.player;
@@ -299,17 +284,26 @@ public class MountSteeringHandler {
         boolean lockOffEdge = wasLockingOnLastTick && !isLockingOnNow;
         wasLockingOnLastTick = isLockingOnNow;
 
-        // Lock-off edge fix (mounted only): force BLO to release its lock-on
-        // camera transform immediately, then keep smoothing engaged for a few
-        // ticks so body eases to BLO's snap target.
         if (lockOffEdge && isOnMountedMob(player)) {
             BLOTransitionSkipHook.skipPostLockOff();
-            postLockOffSmoothingTicks = POST_LOCKOFF_DURATION;
+            if (mountRotateActive) {
+                player.setYRot(mountSmoothedYaw);
+                player.yRotO = mountSmoothedYaw;
+                player.yBodyRot = mountSmoothedYaw;
+                player.yBodyRotO = mountSmoothedYaw;
+                player.yHeadRot = mountSmoothedYaw;
+                player.yHeadRotO = mountSmoothedYaw;
+                blockedLockOnYRot = Float.NaN;
+                postLockOffSmoothingTicks = 0;
+                return;
+            }
+            postLockOffSmoothingTicks = 15;
         }
 
         boolean shouldSmooth = getSmoothLockOnMountTurn()
                 && IntegrationRegistry.isBetterLockOn()
                 && isOnMountedMob(player)
+                && !mountRotateActive
                 && (isLockingOnNow || postLockOffSmoothingTicks > 0);
 
         if (shouldSmooth) {

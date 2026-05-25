@@ -5,10 +5,6 @@ import org.slf4j.Logger;
 
 import java.lang.reflect.Method;
 
-/**
- * Reflection-only EpicFight access (EF is an OPTIONAL dep here). Used to
- * detect lock-on state for the BLO+mount smooth-turn feature.
- */
 public final class EpicFightHelper {
 
     private static final Logger LOGGER = LogUtils.getLogger();

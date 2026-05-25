@@ -2,14 +2,7 @@ package com.bettermountsteering.compat;
 
 import net.minecraft.client.player.Input;
 
-/**
- * Controllable integration (analog stick reading) for mount-rotate. When
- * Controllable is present, analog stick values flow through vanilla
- * {@link Input#forwardImpulse}/{@code leftImpulse} as fractional floats.
- */
 public final class ControllableHelper {
-
-    private static final float DEADZONE = 0.15F;
 
     private ControllableHelper() {}
 
@@ -18,7 +11,7 @@ public final class ControllableHelper {
         float strafe  = input.leftImpulse;
 
         float magnitude = (float) Math.sqrt(forward * forward + strafe * strafe);
-        if (magnitude < DEADZONE) return new float[]{0, 0};
+        if (magnitude < 0.15F) return new float[]{0, 0};
         return new float[]{forward, strafe};
     }
 }

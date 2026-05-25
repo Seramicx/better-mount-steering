@@ -1,7 +1,3 @@
-// Multi-loader root. Each loader subproject (forge-1.20.1/, neoforge-1.21.1/,
-// fabric-1.20.1/) has its own build.gradle and pulls shared source from
-// common/. There is no aggregating Java compile at the root.
-
 subprojects {
     tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'

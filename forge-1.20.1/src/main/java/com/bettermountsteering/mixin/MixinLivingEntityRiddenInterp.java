@@ -11,13 +11,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Substitutes {@code pPlayer.yRot} with mount-rotate's smoothed yaw inside
- * {@code travelRidden}, so the mount steers smoothly. Also preserves the
- * mount's previous-tick rotation fields ({@code yRotO}, {@code yBodyRotO},
- * {@code yHeadRotO}) which {@code travelRidden} clobbers - without that, the
- * client's per-frame interp would snap the mount's render rotation each tick.
- */
 @Mixin(LivingEntity.class)
 public abstract class MixinLivingEntityRiddenInterp {
 

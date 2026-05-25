@@ -4,8 +4,6 @@ import net.minecraft.client.player.Input;
 
 public final class ControllableHelper {
 
-    private static final float DEADZONE = 0.15F;
-
     private ControllableHelper() {}
 
     public static float[] readAnalogDirection(Input input) {
@@ -13,7 +11,7 @@ public final class ControllableHelper {
         float strafe  = input.leftImpulse;
 
         float magnitude = (float) Math.sqrt(forward * forward + strafe * strafe);
-        if (magnitude < DEADZONE) return new float[]{0, 0};
+        if (magnitude < 0.15F) return new float[]{0, 0};
         return new float[]{forward, strafe};
     }
 }

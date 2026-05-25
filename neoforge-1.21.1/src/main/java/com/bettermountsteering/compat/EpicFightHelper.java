@@ -5,10 +5,6 @@ import org.slf4j.Logger;
 
 import java.lang.reflect.Method;
 
-/**
- * Reflection-only EpicFight access (EF is OPTIONAL). Used to detect lock-on
- * state so mount-rotate yields to EF's lock-on path.
- */
 public final class EpicFightHelper {
 
     private static final Logger LOGGER = LogUtils.getLogger();
