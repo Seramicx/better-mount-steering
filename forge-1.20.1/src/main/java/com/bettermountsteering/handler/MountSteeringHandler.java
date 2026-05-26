@@ -83,7 +83,7 @@ public class MountSteeringHandler {
 
     private static float smoothAngle(float from, float to, float factor) {
         float delta = Mth.wrapDegrees(to - from);
-        return from + delta * factor;
+        return Mth.wrapDegrees(from + delta * factor);
     }
 
     private static float[] readDirectionalInput(Input input) {
@@ -216,11 +216,25 @@ public class MountSteeringHandler {
         if (freshMount) {
             mountSmoothedYaw = bodyYaw;
         } else if (justExitedLockOn) {
-            mountSmoothedYaw = Float.isNaN(blockedLockOnYRot) ? bodyYaw : blockedLockOnYRot;
+            float efYaw = EpicFightHelper.getCameraYRot();
+            float efXRot = EpicFightHelper.getCameraXRot();
+            if (!Float.isNaN(efYaw)) {
+                decoupledCameraYaw = efYaw;
+                bodyYaw = Mth.wrapDegrees(efYaw + offsetAngle);
+            }
+            if (!Float.isNaN(efXRot)) decoupledCameraXRot = efXRot;
+            mountSmoothedYaw = bodyYaw;
         }
 
         mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, getMountTurnSpeed());
         player.setYRot(mountSmoothedYaw);
+        Mob mount = (Mob) player.getVehicle();
+        mount.setYRot(mountSmoothedYaw);
+        mount.yBodyRot = mountSmoothedYaw;
+        if (freshMount || justExitedLockOn) {
+            mount.yRotO = mountSmoothedYaw;
+            mount.yBodyRotO = mountSmoothedYaw;
+        }
 
         float modMagnitude = Mth.sqrt(input.forwardImpulse * input.forwardImpulse
                 + input.leftImpulse * input.leftImpulse);
@@ -246,6 +260,10 @@ public class MountSteeringHandler {
             player.setYRot(mountSmoothedYaw);
             player.yBodyRot = mountSmoothedYaw;
             player.yHeadRot = mountSmoothedYaw;
+            if (player.getVehicle() instanceof Mob mount) {
+                mount.setYRot(mountSmoothedYaw);
+                mount.yBodyRot = mountSmoothedYaw;
+            }
         }
 
         if (decoupleActive && decoupleTransitioning) {
@@ -284,6 +302,16 @@ public class MountSteeringHandler {
         LocalPlayer player = MC.player;
         if (player == null) return;
 
+        if (mountRotateActive) {
+            player.setYRot(mountSmoothedYaw);
+            player.yBodyRot = mountSmoothedYaw;
+            player.yHeadRot = mountSmoothedYaw;
+            if (player.getVehicle() instanceof Mob mount) {
+                mount.setYRot(mountSmoothedYaw);
+                mount.yBodyRot = mountSmoothedYaw;
+            }
+        }
+
         boolean isLockingOnNow = EpicFightHelper.isLockOnTargeting();
         boolean lockOffEdge = wasLockingOnLastTick && !isLockingOnNow;
         wasLockingOnLastTick = isLockingOnNow;
@@ -297,9 +325,30 @@ public class MountSteeringHandler {
                 player.yBodyRotO = mountSmoothedYaw;
                 player.yHeadRot = mountSmoothedYaw;
                 player.yHeadRotO = mountSmoothedYaw;
+                if (player.getVehicle() instanceof Mob mount) {
+                    mount.setYRot(mountSmoothedYaw);
+                    mount.yRotO = mountSmoothedYaw;
+                    mount.yBodyRot = mountSmoothedYaw;
+                    mount.yBodyRotO = mountSmoothedYaw;
+                }
                 blockedLockOnYRot = Float.NaN;
                 postLockOffSmoothingTicks = 0;
                 return;
+            }
+            if (!Float.isNaN(blockedLockOnYRot)) {
+                player.setYRot(blockedLockOnYRot);
+                player.yRotO = blockedLockOnYRot;
+                player.yBodyRot = blockedLockOnYRot;
+                player.yBodyRotO = blockedLockOnYRot;
+                player.yHeadRot = blockedLockOnYRot;
+                player.yHeadRotO = blockedLockOnYRot;
+                if (player.getVehicle() instanceof Mob mount) {
+                    mount.setYRot(blockedLockOnYRot);
+                    mount.yRotO = blockedLockOnYRot;
+                    mount.yBodyRot = blockedLockOnYRot;
+                    mount.yBodyRotO = blockedLockOnYRot;
+                }
+                decoupledCameraYaw = blockedLockOnYRot;
             }
             postLockOffSmoothingTicks = 15;
         }
@@ -313,7 +362,7 @@ public class MountSteeringHandler {
         if (shouldSmooth) {
             float current = player.getYRot();
             if (Float.isNaN(blockedLockOnYRot)) {
-                blockedLockOnYRot = current;
+                blockedLockOnYRot = Mth.wrapDegrees(current);
             } else {
                 float smoothed = smoothAngle(blockedLockOnYRot, current, getBloLockOnTurnSmoothness());
                 player.setYRot(smoothed);

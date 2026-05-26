@@ -10,7 +10,3 @@ run-client/
 logs/
 crash-reports/
 bin/
-docs/
-investigation_extracted/
-raw/
-release-notes-*.md
