@@ -3,7 +3,7 @@ plugins {
     id 'maven-publish'
 }
 
-def fabric_mod_version = '1.0.0'
+def fabric_mod_version = '1.0.1'
 version = fabric_mod_version
 group = maven_group
 

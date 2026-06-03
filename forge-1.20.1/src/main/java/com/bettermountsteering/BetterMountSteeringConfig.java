@@ -6,9 +6,13 @@ public class BetterMountSteeringConfig {
 
     public static final ForgeConfigSpec CLIENT_CONFIG;
 
+    public enum IdleBehavior { FACE_CAMERA, HOLD_DIRECTION }
+
     public static final ForgeConfigSpec.DoubleValue MOUNT_TURN_SPEED;
     public static final ForgeConfigSpec.BooleanValue SMOOTH_LOCKON_MOUNT_TURN;
     public static final ForgeConfigSpec.DoubleValue BLO_LOCKON_TURN_SMOOTHNESS;
+    public static final ForgeConfigSpec.IntValue TPS_AIM_LINGER_TICKS;
+    public static final ForgeConfigSpec.EnumValue<IdleBehavior> IDLE_BEHAVIOR;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -51,6 +55,24 @@ public class BetterMountSteeringConfig {
                     "Independent from mountTurnSpeed - that's only used for the non-locked-on path."
                 )
                 .defineInRange("bloLockOnTurnSmoothness", 0.50, 0.01, 1.0);
+
+        TPS_AIM_LINGER_TICKS = builder
+                .comment(
+                    "After releasing a ranged/aim item (bow, crossbow, spear, shield) while mounted,",
+                    "keep Epic Fight's TPS aiming camera suppressed for this many extra ticks before",
+                    "the mount-steering body-rotate camera takes over again.",
+                    "0 = disabled (current behavior, camera swaps back instantly).",
+                    "20 ticks = 1 second."
+                )
+                .defineInRange("tpsAimLingerTicks", 0, 0, 200);
+
+        IDLE_BEHAVIOR = builder
+                .comment(
+                    "Body behavior when you stop moving on a mount. HOLD_DIRECTION (default): body",
+                    "keeps the direction it was moving in until you move again or leave 3rd-person",
+                    "back. FACE_CAMERA: body lerps back to the camera direction on stop."
+                )
+                .defineEnum("idleBehavior", IdleBehavior.HOLD_DIRECTION);
 
         builder.pop();
 

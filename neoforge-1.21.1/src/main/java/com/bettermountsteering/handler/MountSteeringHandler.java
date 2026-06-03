@@ -45,7 +45,10 @@ public class MountSteeringHandler {
     private static boolean wasLockingOnLastTick = false;
     private static int postLockOffSmoothingTicks = 0;
 
+    private static int tpsAimLingerRemaining = 0;
+
     public static boolean isMountRotateActive() { return mountRotateActive; }
+    public static boolean isTpsAimLingerActive() { return tpsAimLingerRemaining > 0; }
     public static float   getMountSmoothedYaw() { return mountSmoothedYaw; }
     public static float   getMountInputMagnitude() { return mountInputMagnitude; }
 
@@ -75,6 +78,16 @@ public class MountSteeringHandler {
     private static float getBloLockOnTurnSmoothness() {
         try { return (float) BetterMountSteeringConfig.BLO_LOCKON_TURN_SMOOTHNESS.get().doubleValue(); }
         catch (Exception e) { return 0.50F; }
+    }
+
+    private static int getTpsAimLingerTicks() {
+        try { return BetterMountSteeringConfig.TPS_AIM_LINGER_TICKS.get(); }
+        catch (Exception e) { return 0; }
+    }
+
+    private static BetterMountSteeringConfig.IdleBehavior getIdleBehavior() {
+        try { return BetterMountSteeringConfig.IDLE_BEHAVIOR.get(); }
+        catch (Exception e) { return BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION; }
     }
 
     private static boolean isOnMountedMob(LocalPlayer player) {
@@ -170,6 +183,7 @@ public class MountSteeringHandler {
             return false;
         }
         if (player.isUsingItem() || player.isBlocking()) {
+            tpsAimLingerRemaining = getTpsAimLingerTicks();
             deactivateDecouple(player);
             return false;
         }
@@ -179,6 +193,18 @@ public class MountSteeringHandler {
         float rawStrafe  = dir[1];
         float rawMagnitude = Mth.sqrt(rawForward * rawForward + rawStrafe * rawStrafe);
         if (rawMagnitude < 0.01F) {
+            if (getIdleBehavior() == BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION
+                    && decoupleActive && !Float.isNaN(mountSmoothedYaw)) {
+                Mob mount = (Mob) player.getVehicle();
+                player.setYRot(mountSmoothedYaw);
+                mount.setYRot(mountSmoothedYaw);
+                mount.yBodyRot = mountSmoothedYaw;
+                mountInputMagnitude = 0F;
+                input.forwardImpulse = 0F;
+                input.leftImpulse = 0F;
+                mountRotateActive = true;
+                return true;
+            }
             deactivateDecouple(player);
             return false;
         }
@@ -297,6 +323,12 @@ public class MountSteeringHandler {
     public static void onClientTickEnd(ClientTickEvent.Post event) {
         LocalPlayer player = MC.player;
         if (player == null) return;
+
+        if (tpsAimLingerRemaining > 0
+                && !player.isUsingItem()
+                && !player.isBlocking()) {
+            tpsAimLingerRemaining--;
+        }
 
         if (mountRotateActive) {
             player.setYRot(mountSmoothedYaw);

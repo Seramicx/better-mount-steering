@@ -53,6 +53,11 @@ public final class MountSteeringHandler {
         catch (Exception e) { return 0.25F; }
     }
 
+    private static BetterMountSteeringConfig.IdleBehavior getIdleBehavior() {
+        try { return BetterMountSteeringConfig.IDLE_BEHAVIOR.get(); }
+        catch (Exception e) { return BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION; }
+    }
+
     private static boolean isOnMountedMob(LocalPlayer player) {
         Entity v = player.getVehicle();
         return v instanceof Mob mob && mob.getControllingPassenger() == player;
@@ -137,6 +142,15 @@ public final class MountSteeringHandler {
         float rawStrafe  = dir[1];
         float rawMagnitude = Mth.sqrt(rawForward * rawForward + rawStrafe * rawStrafe);
         if (rawMagnitude < 0.01F) {
+            if (getIdleBehavior() == BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION
+                    && decoupleActive && !Float.isNaN(mountSmoothedYaw)) {
+                player.setYRot(mountSmoothedYaw);
+                mountInputMagnitude = 0F;
+                input.forwardImpulse = 0F;
+                input.leftImpulse = 0F;
+                mountRotateActive = true;
+                return true;
+            }
             deactivateDecouple(player);
             return false;
         }

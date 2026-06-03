@@ -21,7 +21,7 @@ public final class EpicFightTPSDecoupleHook {
 
         try {
             DefaultEventSubscription<ActivateTPSCamera> sub = event -> {
-                if (MountSteeringHandler.isMountRotateActive()) {
+                if (MountSteeringHandler.isMountRotateActive() || MountSteeringHandler.isTpsAimLingerActive()) {
                     event.cancel();
                 }
             };
