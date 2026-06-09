@@ -2,12 +2,13 @@
 
 ![Showcase](assets/showcase.gif)
 
-Decoupled mount camera and smoother lock-on body turns while mounted. Forge 1.20.1, NeoForge 1.21.1, Fabric 1.20.1, Fabric 1.21.1.
+Decoupled mount camera and smoother lock-on body turns while mounted. Forge 1.19.2, Forge 1.20.1, NeoForge 1.21.1, Fabric 1.20.1, Fabric 1.21.1.
 
 ## Loaders
 
 | Loader | Minecraft | Mod version |
 |---|---|---|
+| Forge | 1.19.2 | 1.0.0 |
 | Forge | 1.20.1 | 1.0.5 |
 | NeoForge | 1.21.1 | 1.0.5 |
 | Fabric | 1.20.1 | 1.0.0 |
@@ -43,6 +44,7 @@ Forge and NeoForge also have:
 
 | Loader | Minecraft | Loader version |
 |---|---|---|
+| Forge | 1.19.2 | Forge 43+ |
 | Forge | 1.20.1 | Forge 47+ |
 | NeoForge | 1.21.1 | NeoForge 21.1+ |
 | Fabric | 1.20.1 | Fabric Loader 0.15+, Fabric API, Forge Config API Port |
@@ -58,6 +60,7 @@ Optional: Better Lockon, Epic Fight, Shoulder Surfing Reloaded, Controllable (va
 ## Building
 
 ```
+./gradlew :forge-1.19.2:build
 ./gradlew :forge-1.20.1:build
 ./gradlew :neoforge-1.21.1:build
 ./gradlew :fabric-1.20.1:build
