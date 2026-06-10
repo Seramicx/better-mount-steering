@@ -1,7 +1,6 @@
 package com.bettermountsteering.handler;
 
 import com.bettermountsteering.BetterMountSteeringConfig;
-import com.bettermountsteering.BetterMountSteeringMod;
 import com.bettermountsteering.compat.BLOTransitionSkipHook;
 import com.bettermountsteering.compat.ControllableHelper;
 import com.bettermountsteering.compat.EpicFightHelper;
@@ -14,79 +13,74 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.MovementInputUpdateEvent;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = BetterMountSteeringMod.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class MountSteeringHandler {
 
-    private static final Minecraft MC = Minecraft.getInstance();
+    private static final MountSteeringHandler INSTANCE = new MountSteeringHandler();
 
-    private static volatile boolean mountRotateActive = false;
-    private static float mountSmoothedYaw = Float.NaN;
+    public static MountSteeringHandler getInstance() { return INSTANCE; }
 
-    private static volatile boolean decoupleActive = false;
-    private static volatile boolean decoupleTransitioning = false;
-    private static volatile float decoupledCameraYaw = 0F;
-    private static volatile float decoupledCameraXRot = 0F;
+    private volatile boolean mountRotateActive = false;
+    private float mountSmoothedYaw = Float.NaN;
 
-    private static volatile float mountInputMagnitude = 0F;
+    private volatile boolean decoupleActive = false;
+    private volatile boolean decoupleTransitioning = false;
+    private volatile float decoupledCameraYaw = 0F;
+    private volatile float decoupledCameraXRot = 0F;
 
-    private static volatile boolean processingMouseTurn = false;
+    private volatile float mountInputMagnitude = 0F;
 
-    private static volatile boolean wasOnMountLastTick = false;
+    private volatile boolean processingMouseTurn = false;
 
-    private static float blockedLockOnYRot = Float.NaN;
-    private static boolean wasLockingOnLastTick = false;
-    private static int postLockOffSmoothingTicks = 0;
+    private volatile boolean wasOnMountLastTick = false;
 
-    private static int tpsAimLingerRemaining = 0;
+    private float blockedLockOnYRot = Float.NaN;
+    private boolean wasLockingOnLastTick = false;
+    private int postLockOffSmoothingTicks = 0;
 
-    public static boolean isMountRotateActive() { return mountRotateActive; }
-    public static boolean isTpsAimLingerActive() { return tpsAimLingerRemaining > 0; }
-    public static float   getMountSmoothedYaw() { return mountSmoothedYaw; }
-    public static float   getMountInputMagnitude() { return mountInputMagnitude; }
+    private int tpsAimLingerRemaining = 0;
 
-    public static boolean isProcessingMouseTurn() { return processingMouseTurn; }
-    public static void    setProcessingMouseTurn(boolean v) { processingMouseTurn = v; }
+    private MountSteeringHandler() {}
 
-    public static boolean isDecoupleActive()       { return decoupleActive; }
-    public static boolean isDecoupleTransitioning(){ return decoupleTransitioning; }
-    public static float   getDecoupledCameraYaw() { return decoupledCameraYaw; }
-    public static float   getDecoupledCameraXRot(){ return decoupledCameraXRot; }
+    public static boolean isMountRotateActive()    { return INSTANCE.mountRotateActive; }
+    public static boolean isTpsAimLingerActive()   { return INSTANCE.tpsAimLingerRemaining > 0; }
+    public static float   getMountSmoothedYaw()    { return INSTANCE.mountSmoothedYaw; }
+    public static float   getMountInputMagnitude() { return INSTANCE.mountInputMagnitude; }
+
+    public static boolean isProcessingMouseTurn()        { return INSTANCE.processingMouseTurn; }
+    public static void    setProcessingMouseTurn(boolean v) { INSTANCE.processingMouseTurn = v; }
+
+    public static boolean isDecoupleActive()        { return INSTANCE.decoupleActive; }
+    public static boolean isDecoupleTransitioning() { return INSTANCE.decoupleTransitioning; }
+    public static float   getDecoupledCameraYaw()   { return INSTANCE.decoupledCameraYaw; }
+    public static float   getDecoupledCameraXRot()  { return INSTANCE.decoupledCameraXRot; }
 
     public static void addCameraDelta(float dy, float dx) {
-        decoupledCameraYaw  = Mth.wrapDegrees(decoupledCameraYaw + dy);
-        decoupledCameraXRot = Mth.clamp(decoupledCameraXRot + dx, -90F, 90F);
+        INSTANCE.decoupledCameraYaw  = Mth.wrapDegrees(INSTANCE.decoupledCameraYaw + dy);
+        INSTANCE.decoupledCameraXRot = Mth.clamp(INSTANCE.decoupledCameraXRot + dx, -90F, 90F);
     }
 
-    private static float getMountTurnSpeed() {
-        try { return (float) BetterMountSteeringConfig.MOUNT_TURN_SPEED.get().doubleValue(); }
-        catch (Exception e) { return 0.25F; }
+    private float mountTurnSpeed() {
+        return (float) BetterMountSteeringConfig.MOUNT_TURN_SPEED.get().doubleValue();
     }
 
-    private static boolean getSmoothLockOnMountTurn() {
-        try { return BetterMountSteeringConfig.SMOOTH_LOCKON_MOUNT_TURN.get(); }
-        catch (Exception e) { return true; }
+    private boolean smoothLockOnMountTurn() {
+        return BetterMountSteeringConfig.SMOOTH_LOCKON_MOUNT_TURN.get();
     }
 
-    private static float getBloLockOnTurnSmoothness() {
-        try { return (float) BetterMountSteeringConfig.BLO_LOCKON_TURN_SMOOTHNESS.get().doubleValue(); }
-        catch (Exception e) { return 0.50F; }
+    private float bloLockOnTurnSmoothness() {
+        return (float) BetterMountSteeringConfig.BLO_LOCKON_TURN_SMOOTHNESS.get().doubleValue();
     }
 
-    private static int getTpsAimLingerTicks() {
-        try { return BetterMountSteeringConfig.TPS_AIM_LINGER_TICKS.get(); }
-        catch (Exception e) { return 0; }
+    private int tpsAimLingerTicks() {
+        return BetterMountSteeringConfig.TPS_AIM_LINGER_TICKS.get();
     }
 
-    private static BetterMountSteeringConfig.IdleBehavior getIdleBehavior() {
-        try { return BetterMountSteeringConfig.IDLE_BEHAVIOR.get(); }
-        catch (Exception e) { return BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION; }
+    private BetterMountSteeringConfig.IdleBehavior idleBehavior() {
+        return BetterMountSteeringConfig.IDLE_BEHAVIOR.get();
     }
 
     private static boolean isOnMountedMob(LocalPlayer player) {
@@ -100,13 +94,14 @@ public class MountSteeringHandler {
     }
 
     private static float[] readDirectionalInput(Input input) {
+        Minecraft mc = Minecraft.getInstance();
         float rawForward = 0F;
-        if (MC.options.keyUp.isDown())   rawForward += 1.0F;
-        if (MC.options.keyDown.isDown()) rawForward -= 1.0F;
+        if (mc.options.keyUp.isDown())   rawForward += 1.0F;
+        if (mc.options.keyDown.isDown()) rawForward -= 1.0F;
 
         float rawStrafe = 0F;
-        if (MC.options.keyLeft.isDown())  rawStrafe += 1.0F;
-        if (MC.options.keyRight.isDown()) rawStrafe -= 1.0F;
+        if (mc.options.keyLeft.isDown())  rawStrafe += 1.0F;
+        if (mc.options.keyRight.isDown()) rawStrafe -= 1.0F;
 
         if (rawForward == 0F && rawStrafe == 0F) {
             float[] analog = ControllableHelper.readAnalogDirection(input);
@@ -117,7 +112,7 @@ public class MountSteeringHandler {
         return new float[]{rawForward, rawStrafe};
     }
 
-    private static void deactivateDecouple(LocalPlayer player) {
+    private void deactivateDecouple(LocalPlayer player) {
         if (decoupleActive && !decoupleTransitioning) {
             float py = player.getYRot();
             float wrapped = Mth.wrapDegrees(py - decoupledCameraYaw);
@@ -131,9 +126,9 @@ public class MountSteeringHandler {
         mountRotateActive = false;
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onMovementInput(MovementInputUpdateEvent event) {
-        LocalPlayer player = MC.player;
+    @SubscribeEvent
+    public void onMovementInput(MovementInputUpdateEvent event) {
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
 
         if (EpicFightHelper.isLockOnTargeting()) {
@@ -153,13 +148,13 @@ public class MountSteeringHandler {
         handleMountRotate(player, event.getInput());
     }
 
-    private static boolean handleMountRotate(LocalPlayer player, Input input) {
+    private boolean handleMountRotate(LocalPlayer player, Input input) {
         boolean nowOnMount = isOnMountedMob(player);
         boolean freshMount = nowOnMount && !wasOnMountLastTick;
         wasOnMountLastTick = nowOnMount;
 
         mountRotateActive = false;
-        if (MC.options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
+        if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
             deactivateDecouple(player);
             mountSmoothedYaw = Float.NaN;
             return false;
@@ -182,7 +177,7 @@ public class MountSteeringHandler {
             return false;
         }
         if (player.isUsingItem() || player.isBlocking()) {
-            tpsAimLingerRemaining = getTpsAimLingerTicks();
+            tpsAimLingerRemaining = tpsAimLingerTicks();
             deactivateDecouple(player);
             return false;
         }
@@ -192,7 +187,7 @@ public class MountSteeringHandler {
         float rawStrafe  = dir[1];
         float rawMagnitude = Mth.sqrt(rawForward * rawForward + rawStrafe * rawStrafe);
         if (rawMagnitude < 0.01F) {
-            if (getIdleBehavior() == BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION
+            if (idleBehavior() == BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION
                     && decoupleActive && !Float.isNaN(mountSmoothedYaw)) {
                 Mob mount = (Mob) player.getVehicle();
                 player.setYRot(mountSmoothedYaw);
@@ -252,7 +247,7 @@ public class MountSteeringHandler {
             mountSmoothedYaw = bodyYaw;
         }
 
-        mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, getMountTurnSpeed());
+        mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, mountTurnSpeed());
         player.setYRot(mountSmoothedYaw);
         Mob mount = (Mob) player.getVehicle();
         mount.setYRot(mountSmoothedYaw);
@@ -274,12 +269,12 @@ public class MountSteeringHandler {
         return true;
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+    @SubscribeEvent
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         if (!event.side.isClient()) return;
 
-        LocalPlayer player = MC.player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || event.player != player) return;
 
         if (mountRotateActive) {
@@ -310,7 +305,7 @@ public class MountSteeringHandler {
                 decoupleActive = false;
                 decoupleTransitioning = false;
             } else {
-                float step = getMountTurnSpeed();
+                float step = mountTurnSpeed();
                 float newYRot = currentYRot + dy * step;
                 float newXRot = currentXRot + dx * step;
                 player.setYRot(newYRot);
@@ -322,10 +317,10 @@ public class MountSteeringHandler {
 
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onClientTickEnd(TickEvent.ClientTickEvent event) {
+    @SubscribeEvent
+    public void onClientTickEnd(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        LocalPlayer player = MC.player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
 
         if (tpsAimLingerRemaining > 0
@@ -385,7 +380,7 @@ public class MountSteeringHandler {
             postLockOffSmoothingTicks = 15;
         }
 
-        boolean shouldSmooth = getSmoothLockOnMountTurn()
+        boolean shouldSmooth = smoothLockOnMountTurn()
                 && IntegrationRegistry.isBetterLockOn()
                 && isOnMountedMob(player)
                 && !mountRotateActive
@@ -396,7 +391,7 @@ public class MountSteeringHandler {
             if (Float.isNaN(blockedLockOnYRot)) {
                 blockedLockOnYRot = Mth.wrapDegrees(current);
             } else {
-                float smoothed = smoothAngle(blockedLockOnYRot, current, getBloLockOnTurnSmoothness());
+                float smoothed = smoothAngle(blockedLockOnYRot, current, bloLockOnTurnSmoothness());
                 player.setYRot(smoothed);
                 player.yRotO = smoothed;
                 player.yBodyRot = smoothed;

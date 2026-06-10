@@ -11,51 +11,51 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 
-public final class MountSteeringHandler {
+public class MountSteeringHandler {
 
-    private static final Minecraft MC = Minecraft.getInstance();
+    private static final MountSteeringHandler INSTANCE = new MountSteeringHandler();
 
-    private static volatile boolean mountRotateActive = false;
-    private static float mountSmoothedYaw = Float.NaN;
+    public static MountSteeringHandler getInstance() { return INSTANCE; }
 
-    private static volatile boolean decoupleActive = false;
-    private static volatile boolean decoupleTransitioning = false;
-    private static volatile float decoupledCameraYaw = 0F;
-    private static volatile float decoupledCameraXRot = 0F;
+    private volatile boolean mountRotateActive = false;
+    private float mountSmoothedYaw = Float.NaN;
 
-    private static volatile float mountInputMagnitude = 0F;
+    private volatile boolean decoupleActive = false;
+    private volatile boolean decoupleTransitioning = false;
+    private volatile float decoupledCameraYaw = 0F;
+    private volatile float decoupledCameraXRot = 0F;
 
-    private static volatile boolean processingMouseTurn = false;
+    private volatile float mountInputMagnitude = 0F;
 
-    private static volatile boolean wasOnMountLastTick = false;
+    private volatile boolean processingMouseTurn = false;
+
+    private volatile boolean wasOnMountLastTick = false;
 
     private MountSteeringHandler() {}
 
-    public static boolean isMountRotateActive() { return mountRotateActive; }
-    public static float   getMountSmoothedYaw() { return mountSmoothedYaw; }
-    public static float   getMountInputMagnitude() { return mountInputMagnitude; }
+    public static boolean isMountRotateActive()    { return INSTANCE.mountRotateActive; }
+    public static float   getMountSmoothedYaw()    { return INSTANCE.mountSmoothedYaw; }
+    public static float   getMountInputMagnitude() { return INSTANCE.mountInputMagnitude; }
 
-    public static boolean isProcessingMouseTurn() { return processingMouseTurn; }
-    public static void    setProcessingMouseTurn(boolean v) { processingMouseTurn = v; }
+    public static boolean isProcessingMouseTurn()        { return INSTANCE.processingMouseTurn; }
+    public static void    setProcessingMouseTurn(boolean v) { INSTANCE.processingMouseTurn = v; }
 
-    public static boolean isDecoupleActive()       { return decoupleActive; }
-    public static boolean isDecoupleTransitioning(){ return decoupleTransitioning; }
-    public static float   getDecoupledCameraYaw() { return decoupledCameraYaw; }
-    public static float   getDecoupledCameraXRot(){ return decoupledCameraXRot; }
+    public static boolean isDecoupleActive()        { return INSTANCE.decoupleActive; }
+    public static boolean isDecoupleTransitioning() { return INSTANCE.decoupleTransitioning; }
+    public static float   getDecoupledCameraYaw()   { return INSTANCE.decoupledCameraYaw; }
+    public static float   getDecoupledCameraXRot()  { return INSTANCE.decoupledCameraXRot; }
 
     public static void addCameraDelta(float dy, float dx) {
-        decoupledCameraYaw  = Mth.wrapDegrees(decoupledCameraYaw + dy);
-        decoupledCameraXRot = Mth.clamp(decoupledCameraXRot + dx, -90F, 90F);
+        INSTANCE.decoupledCameraYaw  = Mth.wrapDegrees(INSTANCE.decoupledCameraYaw + dy);
+        INSTANCE.decoupledCameraXRot = Mth.clamp(INSTANCE.decoupledCameraXRot + dx, -90F, 90F);
     }
 
-    private static float getMountTurnSpeed() {
-        try { return (float) BetterMountSteeringConfig.MOUNT_TURN_SPEED.get().doubleValue(); }
-        catch (Exception e) { return 0.25F; }
+    private float mountTurnSpeed() {
+        return (float) BetterMountSteeringConfig.MOUNT_TURN_SPEED.get().doubleValue();
     }
 
-    private static BetterMountSteeringConfig.IdleBehavior getIdleBehavior() {
-        try { return BetterMountSteeringConfig.IDLE_BEHAVIOR.get(); }
-        catch (Exception e) { return BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION; }
+    private BetterMountSteeringConfig.IdleBehavior idleBehavior() {
+        return BetterMountSteeringConfig.IDLE_BEHAVIOR.get();
     }
 
     private static boolean isOnMountedMob(LocalPlayer player) {
@@ -69,13 +69,14 @@ public final class MountSteeringHandler {
     }
 
     private static float[] readDirectionalInput(Input input) {
+        Minecraft mc = Minecraft.getInstance();
         float rawForward = 0F;
-        if (MC.options.keyUp.isDown())   rawForward += 1.0F;
-        if (MC.options.keyDown.isDown()) rawForward -= 1.0F;
+        if (mc.options.keyUp.isDown())   rawForward += 1.0F;
+        if (mc.options.keyDown.isDown()) rawForward -= 1.0F;
 
         float rawStrafe = 0F;
-        if (MC.options.keyLeft.isDown())  rawStrafe += 1.0F;
-        if (MC.options.keyRight.isDown()) rawStrafe -= 1.0F;
+        if (mc.options.keyLeft.isDown())  rawStrafe += 1.0F;
+        if (mc.options.keyRight.isDown()) rawStrafe -= 1.0F;
 
         if (rawForward == 0F && rawStrafe == 0F) {
             float[] analog = ControllableHelper.readAnalogDirection(input);
@@ -86,7 +87,7 @@ public final class MountSteeringHandler {
         return new float[]{rawForward, rawStrafe};
     }
 
-    private static void deactivateDecouple(LocalPlayer player) {
+    private void deactivateDecouple(LocalPlayer player) {
         if (decoupleActive && !decoupleTransitioning) {
             float py = player.getYRot();
             float wrapped = Mth.wrapDegrees(py - decoupledCameraYaw);
@@ -101,16 +102,16 @@ public final class MountSteeringHandler {
     }
 
     public static void onMovementInput(LocalPlayer player, Input input) {
-        handleMountRotate(player, input);
+        INSTANCE.handleMountRotate(player, input);
     }
 
-    private static boolean handleMountRotate(LocalPlayer player, Input input) {
+    private boolean handleMountRotate(LocalPlayer player, Input input) {
         boolean nowOnMount = isOnMountedMob(player);
         boolean freshMount = nowOnMount && !wasOnMountLastTick;
         wasOnMountLastTick = nowOnMount;
 
         mountRotateActive = false;
-        if (MC.options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
+        if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
             deactivateDecouple(player);
             mountSmoothedYaw = Float.NaN;
             return false;
@@ -142,7 +143,7 @@ public final class MountSteeringHandler {
         float rawStrafe  = dir[1];
         float rawMagnitude = Mth.sqrt(rawForward * rawForward + rawStrafe * rawStrafe);
         if (rawMagnitude < 0.01F) {
-            if (getIdleBehavior() == BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION
+            if (idleBehavior() == BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION
                     && decoupleActive && !Float.isNaN(mountSmoothedYaw)) {
                 Mob mount = (Mob) player.getVehicle();
                 player.setYRot(mountSmoothedYaw);
@@ -191,7 +192,7 @@ public final class MountSteeringHandler {
             mountSmoothedYaw = bodyYaw;
         }
 
-        mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, getMountTurnSpeed());
+        mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, mountTurnSpeed());
         player.setYRot(mountSmoothedYaw);
         Mob mount = (Mob) player.getVehicle();
         mount.setYRot(mountSmoothedYaw);
@@ -214,6 +215,10 @@ public final class MountSteeringHandler {
     }
 
     public static void onPlayerTickPost(LocalPlayer player) {
+        INSTANCE.tickPost(player);
+    }
+
+    private void tickPost(LocalPlayer player) {
         if (mountRotateActive) {
             player.setYRot(mountSmoothedYaw);
             player.yBodyRot = mountSmoothedYaw;
@@ -242,7 +247,7 @@ public final class MountSteeringHandler {
                 decoupleActive = false;
                 decoupleTransitioning = false;
             } else {
-                float step = getMountTurnSpeed();
+                float step = mountTurnSpeed();
                 float newYRot = currentYRot + dy * step;
                 float newXRot = currentXRot + dx * step;
                 player.setYRot(newYRot);

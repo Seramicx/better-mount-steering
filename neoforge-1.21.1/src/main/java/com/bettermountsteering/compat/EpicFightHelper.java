@@ -1,6 +1,7 @@
 package com.bettermountsteering.compat;
 
 import com.mojang.logging.LogUtils;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
@@ -11,10 +12,10 @@ public final class EpicFightHelper {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static boolean resolved = false;
-    private static Method getInstanceMethod = null;
-    private static Method isLockingOnTargetMethod = null;
-    private static Field cameraYRotField = null;
-    private static Field cameraXRotField = null;
+    @Nullable private static Method getInstanceMethod = null;
+    @Nullable private static Method isLockingOnTargetMethod = null;
+    @Nullable private static Field cameraYRotField = null;
+    @Nullable private static Field cameraXRotField = null;
 
     private EpicFightHelper() {}
 

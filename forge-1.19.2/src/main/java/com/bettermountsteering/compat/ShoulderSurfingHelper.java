@@ -2,6 +2,7 @@ package com.bettermountsteering.compat;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
@@ -12,12 +13,12 @@ public final class ShoulderSurfingHelper {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static boolean resolved = false;
-    private static Method getInstanceMethod = null;
-    private static Method getCameraMethod = null;
-    private static Method isShoulderSurfingMethod = null;
-    private static Method getYRotMethod = null;
-    private static Method getXRotMethod = null;
-    private static Field  lastMovedYRotField = null;
+    @Nullable private static Method getInstanceMethod = null;
+    @Nullable private static Method getCameraMethod = null;
+    @Nullable private static Method isShoulderSurfingMethod = null;
+    @Nullable private static Method getYRotMethod = null;
+    @Nullable private static Method getXRotMethod = null;
+    @Nullable private static Field  lastMovedYRotField = null;
 
     private ShoulderSurfingHelper() {}
 

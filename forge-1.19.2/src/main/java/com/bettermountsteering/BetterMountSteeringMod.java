@@ -1,6 +1,7 @@
 package com.bettermountsteering;
 
 import com.bettermountsteering.compat.IntegrationRegistry;
+import com.bettermountsteering.handler.MountSteeringHandler;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -20,7 +21,7 @@ public class BetterMountSteeringMod {
 
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onCommonSetup);
 
-        MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(MountSteeringHandler.getInstance());
         LOGGER.info("Seramicx's Better Mount Steering loaded.");
     }
 
