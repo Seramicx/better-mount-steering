@@ -12,14 +12,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(targets = "com.github.exopandora.shouldersurfing.client.ShoulderSurfingCamera", remap = false)
 public abstract class MixinSsrSuppressFollowDuringMountRotate {
 
-    @Shadow private int turnCameraWithPlayerDelay;
+    @Shadow private int followPlayerRotationsDelay;
 
     @Inject(method = "tick", at = @At("HEAD"), require = 0, remap = false)
     private void bettermountsteering$preventFollowDuringMountRotate(CallbackInfo ci) {
         boolean active = MountSteeringHandler.isMountRotateActive()
                 || MountSteeringHandler.isDecoupleTransitioning();
-        if (active && this.turnCameraWithPlayerDelay < 2) {
-            this.turnCameraWithPlayerDelay = 2;
+        if (active && this.followPlayerRotationsDelay < 2) {
+            this.followPlayerRotationsDelay = 2;
         }
     }
 }
