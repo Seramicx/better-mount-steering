@@ -14,7 +14,14 @@ public final class BetterMountSteeringClient implements ClientModInitializer {
     public void onInitializeClient() {
         BetterMountSteeringConfigRegister.register();
         IntegrationRegistry.resolve();
+        ClientTickEvents.START_CLIENT_TICK.register(BetterMountSteeringClient::onClientTickStart);
         ClientTickEvents.END_CLIENT_TICK.register(BetterMountSteeringClient::onClientTickPost);
+    }
+
+    private static void onClientTickStart(Minecraft mc) {
+        LocalPlayer player = mc.player;
+        if (player == null) return;
+        MountSteeringHandler.onClientTickStartCombatSnap(player);
     }
 
     private static void onClientTickPost(Minecraft mc) {

@@ -37,13 +37,11 @@ public abstract class MixinEntityTurnDecouple {
     private void bettermountsteering$afterTurn(double yaw, double pitch, CallbackInfo ci) {
         if (!bettermountsteering$shouldRestore) return;
         Entity self = (Entity) (Object) this;
-        float dyaw  = self.getYRot() - bettermountsteering$savedYRot;
+        float dyaw = self.getYRot() - bettermountsteering$savedYRot;
         float dpitch = self.getXRot() - bettermountsteering$savedXRot;
         MountSteeringHandler.addCameraDelta(dyaw, dpitch);
         self.setYRot(bettermountsteering$savedYRot);
-        self.setXRot(bettermountsteering$savedXRot);
         self.yRotO = bettermountsteering$savedYRotO;
-        self.xRotO = bettermountsteering$savedXRotO;
         bettermountsteering$shouldRestore = false;
     }
 }

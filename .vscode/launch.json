@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "neoforge-1.21.1 - Client",
+      "presentation": {
+        "group": "Mod Development - neoforge-1.21.1",
+        "order": 0
+      },
+      "projectName": "neoforge-1.21.1",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@Y:\\neoforge-1.21.1\\build\\moddev\\clientRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@Y:\\neoforge-1.21.1\\build\\moddev\\clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003dbettermountsteering%%Y:\\neoforge-1.21.1\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\neoforge-1.21.1\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    }
+  ]
+}

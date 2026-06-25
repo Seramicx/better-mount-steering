@@ -1,6 +1,7 @@
 package com.bettermountsteering.compat;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.player.LocalPlayer;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -16,6 +17,11 @@ public final class EpicFightHelper {
     @Nullable private static Method isLockingOnTargetMethod = null;
     @Nullable private static Field cameraYRotField = null;
     @Nullable private static Field cameraXRotField = null;
+
+    private static boolean stateResolved = false;
+    @Nullable private static Method getLocalPlayerPatchMethod = null;
+    @Nullable private static Method getEntityStateMethod = null;
+    @Nullable private static Method getLevelMethod = null;
 
     private EpicFightHelper() {}
 
@@ -70,5 +76,35 @@ public final class EpicFightHelper {
         } catch (Throwable t) {
             return Float.NaN;
         }
+    }
+
+    private static void resolveState() {
+        if (stateResolved) return;
+        stateResolved = true;
+        if (!IntegrationRegistry.isEpicFight()) return;
+        try {
+            Class<?> caps = Class.forName("yesman.epicfight.world.capabilities.EpicFightCapabilities");
+            getLocalPlayerPatchMethod = caps.getMethod("getLocalPlayerPatch", LocalPlayer.class);
+            Class<?> patchCls = Class.forName("yesman.epicfight.world.capabilities.entitypatch.LivingEntityPatch");
+            getEntityStateMethod = patchCls.getMethod("getEntityState");
+            Class<?> stateCls = Class.forName("yesman.epicfight.api.animation.types.EntityState");
+            getLevelMethod = stateCls.getMethod("getLevel");
+        } catch (Throwable t) {
+            LOGGER.debug("EpicFight EntityState reflection unavailable: {}", t.getMessage());
+        }
+    }
+
+    public static boolean isAttackAnimActive(LocalPlayer player) {
+        if (player == null) return false;
+        resolveState();
+        if (getLocalPlayerPatchMethod == null || getEntityStateMethod == null) return false;
+        try {
+            Object patch = getLocalPlayerPatchMethod.invoke(null, player);
+            if (patch == null) return false;
+            Object state = getEntityStateMethod.invoke(patch);
+            if (state == null) return false;
+            if (getLevelMethod != null && ((Integer) getLevelMethod.invoke(state)) > 0) return true;
+        } catch (Throwable ignored) {}
+        return false;
     }
 }

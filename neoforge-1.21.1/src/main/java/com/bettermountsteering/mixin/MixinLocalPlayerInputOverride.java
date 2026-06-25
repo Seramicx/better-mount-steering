@@ -15,7 +15,7 @@ public abstract class MixinLocalPlayerInputOverride {
         if (!MountSteeringHandler.isMountRotateActive()) return;
         LocalPlayer self = (LocalPlayer) (Object) this;
         if (self.input == null) return;
-        self.input.forwardImpulse = MountSteeringHandler.getMountInputMagnitude();
-        self.input.leftImpulse = 0F;
+        self.input.forwardImpulse = MountSteeringHandler.getMountInputForward();
+        self.input.leftImpulse = MountSteeringHandler.getMountInputStrafe();
     }
 }

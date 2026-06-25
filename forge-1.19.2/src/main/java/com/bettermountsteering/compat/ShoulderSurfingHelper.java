@@ -18,6 +18,7 @@ public final class ShoulderSurfingHelper {
     @Nullable private static Method isShoulderSurfingMethod = null;
     @Nullable private static Method getYRotMethod = null;
     @Nullable private static Method getXRotMethod = null;
+    @Nullable private static Method lookAtCrosshairMethod = null;
     @Nullable private static Field  lastMovedYRotField = null;
 
     private ShoulderSurfingHelper() {}
@@ -85,6 +86,19 @@ public final class ShoulderSurfingHelper {
             } catch (Throwable ignored) {}
         }
         return Minecraft.getInstance().gameRenderer.getMainCamera().getXRot();
+    }
+
+    public static void lookAtCrosshairTarget() {
+        resolve();
+        if (getInstanceMethod == null) return;
+        try {
+            Object inst = getInstanceMethod.invoke(null);
+            if (inst == null) return;
+            if (lookAtCrosshairMethod == null) {
+                lookAtCrosshairMethod = inst.getClass().getMethod("lookAtCrosshairTarget");
+            }
+            lookAtCrosshairMethod.invoke(inst);
+        } catch (Throwable ignored) {}
     }
 
     public static void setLastMovedYRot(float value) {

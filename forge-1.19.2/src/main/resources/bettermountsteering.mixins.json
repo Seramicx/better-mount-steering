@@ -14,7 +14,9 @@
         "MixinLocalPlayerInputOverride",
         "MixinMouseHandlerProcessing",
         "MixinSsrSuppressFollowDuringMountRotate",
-        "MixinSsrSuppressTurnSnapback"
+        "MixinSsrSuppressTurnSnapback",
+        "MixinSsrSuppressPassengerConstraint",
+        "MixinUseItemFaceCameraOnMount"
     ],
     "injectors": {
         "defaultRequire": 1

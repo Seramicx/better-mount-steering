@@ -27,9 +27,12 @@ public final class ShoulderSurfingHelper {
         resolved = true;
         if (!IntegrationRegistry.isShoulderSurfing()) return;
         try {
-            Class<?> ssrClass = Class.forName("com.github.exopandora.shouldersurfing.api.client.ShoulderSurfing");
-            getInstanceMethod = ssrClass.getMethod("getInstance");
             Class<?> iface = Class.forName("com.github.exopandora.shouldersurfing.api.client.IShoulderSurfing");
+            try {
+                getInstanceMethod = iface.getMethod("getInstance");
+            } catch (NoSuchMethodException v4) {
+                getInstanceMethod = Class.forName("com.github.exopandora.shouldersurfing.api.client.ShoulderSurfing").getMethod("getInstance");
+            }
             getCameraMethod = iface.getMethod("getCamera");
             isShoulderSurfingMethod = iface.getMethod("isShoulderSurfing");
             Class<?> camIface = Class.forName("com.github.exopandora.shouldersurfing.api.client.IShoulderSurfingCamera");

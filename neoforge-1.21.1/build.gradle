@@ -54,7 +54,7 @@ neoForge {
 
 dependencies {
     compileOnly "curse.maven:epic-fight-mod-405076:8080214"
-    compileOnly "curse.maven:shoulder-surfing-reloaded-243190:8043996"
+    compileOnly "curse.maven:shoulder-surfing-reloaded-243190:8301658"
 }
 
 tasks.named('processResources', ProcessResources).configure {

@@ -1,8 +1,10 @@
 package com.bettermountsteering.handler;
 
 import com.bettermountsteering.BetterMountSteeringConfig;
+import com.bettermountsteering.compat.BetterCombatHelper;
 import com.bettermountsteering.compat.ControllableHelper;
 import com.bettermountsteering.compat.ShoulderSurfingHelper;
+import com.bettermountsteering.compat.WizardsHelper;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.Input;
@@ -26,16 +28,25 @@ public class MountSteeringHandler {
     private volatile float decoupledCameraXRot = 0F;
 
     private volatile float mountInputMagnitude = 0F;
+    private volatile float mountInputForward = 0F;
+    private volatile float mountInputStrafe = 0F;
 
     private volatile boolean processingMouseTurn = false;
 
     private volatile boolean wasOnMountLastTick = false;
+
+    private float combatYawO = Float.NaN;
+    private boolean hadCombatLastTick = false;
+    private boolean wasCombatLastTick = false;
+    private boolean wasTpsBackLastTick = false;
 
     private MountSteeringHandler() {}
 
     public static boolean isMountRotateActive()    { return INSTANCE.mountRotateActive; }
     public static float   getMountSmoothedYaw()    { return INSTANCE.mountSmoothedYaw; }
     public static float   getMountInputMagnitude() { return INSTANCE.mountInputMagnitude; }
+    public static float   getMountInputForward()   { return INSTANCE.mountInputForward; }
+    public static float   getMountInputStrafe()    { return INSTANCE.mountInputStrafe; }
 
     public static boolean isProcessingMouseTurn()        { return INSTANCE.processingMouseTurn; }
     public static void    setProcessingMouseTurn(boolean v) { INSTANCE.processingMouseTurn = v; }
@@ -61,6 +72,14 @@ public class MountSteeringHandler {
     private static boolean isOnMountedMob(LocalPlayer player) {
         Entity v = player.getVehicle();
         return v instanceof Mob mob && mob.getControllingPassenger() == player;
+    }
+
+    private static boolean isCombatActive(LocalPlayer player) {
+        if (player.swinging) return true;
+        if (BetterCombatHelper.isAttackInProgress()) return true;
+        if (WizardsHelper.isCasting()) return true;
+        if (player.isBlocking()) return true;
+        return player.isUsingItem();
     }
 
     private static float smoothAngle(float from, float to, float factor) {
@@ -105,13 +124,56 @@ public class MountSteeringHandler {
         INSTANCE.handleMountRotate(player, input);
     }
 
+    public static void onClientTickStartCombatSnap(LocalPlayer player) {
+        if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
+        if (!isOnMountedMob(player)) {
+            INSTANCE.combatYawO = Float.NaN;
+            INSTANCE.hadCombatLastTick = false;
+            return;
+        }
+        if (!isCombatActive(player)) {
+            INSTANCE.combatYawO = Float.NaN;
+            INSTANCE.hadCombatLastTick = false;
+            return;
+        }
+
+        boolean ssr = ShoulderSurfingHelper.isShoulderSurfingActive();
+        float camYaw;
+        if (ssr) {
+            camYaw = ShoulderSurfingHelper.getCameraYaw();
+        } else {
+            camYaw = INSTANCE.decoupleActive ? INSTANCE.decoupledCameraYaw : player.getYRot();
+        }
+
+        float target = Mth.wrapDegrees(camYaw);
+
+        player.setYRot(target);
+        if (player.getVehicle() instanceof Mob mount) {
+            mount.setYRot(target);
+        }
+        INSTANCE.mountSmoothedYaw = target;
+
+        // Ranged weapons fire along the player's pitch; without this the shot keeps the mount-steering pitch
+        if (ssr && isRangedAimActive(player)) {
+            player.setXRot(ShoulderSurfingHelper.getCameraXRot());
+        }
+    }
+
+    private static boolean isRangedAimActive(LocalPlayer player) {
+        if (WizardsHelper.isCasting()) return true;
+        return player.isUsingItem();
+    }
+
     private boolean handleMountRotate(LocalPlayer player, Input input) {
         boolean nowOnMount = isOnMountedMob(player);
         boolean freshMount = nowOnMount && !wasOnMountLastTick;
         wasOnMountLastTick = nowOnMount;
 
         mountRotateActive = false;
-        if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
+        boolean tpsBack = Minecraft.getInstance().options.getCameraType() == CameraType.THIRD_PERSON_BACK;
+        boolean freshTpsBack = tpsBack && !wasTpsBackLastTick;
+        wasTpsBackLastTick = tpsBack;
+        if (!tpsBack) {
             deactivateDecouple(player);
             mountSmoothedYaw = Float.NaN;
             return false;
@@ -133,7 +195,9 @@ public class MountSteeringHandler {
             }
             return false;
         }
-        if (player.isUsingItem() || player.isBlocking()) {
+        boolean combat = isCombatActive(player);
+
+        if ((player.isUsingItem() || player.isBlocking()) && !combat) {
             deactivateDecouple(player);
             return false;
         }
@@ -142,21 +206,45 @@ public class MountSteeringHandler {
         float rawForward = dir[0];
         float rawStrafe  = dir[1];
         float rawMagnitude = Mth.sqrt(rawForward * rawForward + rawStrafe * rawStrafe);
+        boolean combatIdle = combat && rawMagnitude < 0.01F;
+        if (freshTpsBack && !decoupleActive) {
+            boolean ssrSeed = ShoulderSurfingHelper.isShoulderSurfingActive();
+            decoupledCameraYaw  = ssrSeed ? ShoulderSurfingHelper.getCameraYaw()  : player.getYRot();
+            decoupledCameraXRot = ssrSeed ? ShoulderSurfingHelper.getCameraXRot() : player.getXRot();
+            if (Float.isNaN(mountSmoothedYaw)) mountSmoothedYaw = decoupledCameraYaw;
+            decoupleActive = true;
+        }
+
         if (rawMagnitude < 0.01F) {
-            if (idleBehavior() == BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION
+            if (combat) {
+                rawForward = 0F;
+                rawStrafe = 0F;
+                rawMagnitude = 0F;
+            } else if (idleBehavior() == BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION
                     && decoupleActive && !Float.isNaN(mountSmoothedYaw)) {
                 Mob mount = (Mob) player.getVehicle();
                 player.setYRot(mountSmoothedYaw);
                 mount.setYRot(mountSmoothedYaw);
                 mount.yBodyRot = mountSmoothedYaw;
                 mountInputMagnitude = 0F;
+                mountInputForward = 0F;
+                mountInputStrafe = 0F;
                 input.forwardImpulse = 0F;
                 input.leftImpulse = 0F;
                 mountRotateActive = true;
                 return true;
+            } else if (decoupleActive) {
+                mountInputMagnitude = 0F;
+                mountInputForward = 0F;
+                mountInputStrafe = 0F;
+                input.forwardImpulse = 0F;
+                input.leftImpulse = 0F;
+                mountRotateActive = true;
+                return true;
+            } else {
+                deactivateDecouple(player);
+                return false;
             }
-            deactivateDecouple(player);
-            return false;
         }
 
         boolean ssr = ShoulderSurfingHelper.isShoulderSurfingActive();
@@ -185,14 +273,17 @@ public class MountSteeringHandler {
             }
         }
 
-        float offsetAngle = -(float) Math.toDegrees(Math.atan2(rawStrafe, rawForward));
+        float offsetAngle = combat ? 0F : -(float) Math.toDegrees(Math.atan2(rawStrafe, rawForward));
         float bodyYaw     = Mth.wrapDegrees(decoupledCameraYaw + offsetAngle);
+        boolean combatJustEnded = wasCombatLastTick && !combat;
+        wasCombatLastTick = combat;
 
-        if (freshMount) {
+        if (freshMount || combatJustEnded) {
             mountSmoothedYaw = bodyYaw;
         }
 
-        mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, mountTurnSpeed());
+        float turnFactor = combat ? 1.0F : mountTurnSpeed();
+        mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, turnFactor);
         player.setYRot(mountSmoothedYaw);
         Mob mount = (Mob) player.getVehicle();
         mount.setYRot(mountSmoothedYaw);
@@ -205,9 +296,20 @@ public class MountSteeringHandler {
         float modMagnitude = Mth.sqrt(input.forwardImpulse * input.forwardImpulse
                 + input.leftImpulse * input.leftImpulse);
         float magnitude = Math.min(rawMagnitude, modMagnitude);
-        input.forwardImpulse = magnitude;
-        input.leftImpulse = 0F;
-        mountInputMagnitude = magnitude;
+        if (combat) {
+            float slow = combatIdle ? 0F : 0.5F;
+            input.forwardImpulse = rawForward * slow;
+            input.leftImpulse = rawStrafe * slow;
+            mountInputMagnitude = magnitude * slow;
+            mountInputForward = rawForward * slow;
+            mountInputStrafe = rawStrafe * slow;
+        } else {
+            input.forwardImpulse = magnitude;
+            input.leftImpulse = 0F;
+            mountInputMagnitude = magnitude;
+            mountInputForward = magnitude;
+            mountInputStrafe = 0F;
+        }
 
         decoupleActive = true;
         mountRotateActive = true;
@@ -220,12 +322,28 @@ public class MountSteeringHandler {
 
     private void tickPost(LocalPlayer player) {
         if (mountRotateActive) {
+            boolean combat = isCombatActive(player);
+            boolean hasInterpPrev = combat && hadCombatLastTick && !Float.isNaN(combatYawO);
             player.setYRot(mountSmoothedYaw);
             player.yBodyRot = mountSmoothedYaw;
             player.yHeadRot = mountSmoothedYaw;
+            if (hasInterpPrev) {
+                player.yBodyRotO = combatYawO;
+                player.yHeadRotO = combatYawO;
+            }
             if (player.getVehicle() instanceof Mob mount) {
                 mount.setYRot(mountSmoothedYaw);
                 mount.yBodyRot = mountSmoothedYaw;
+                if (hasInterpPrev) {
+                    mount.yBodyRotO = combatYawO;
+                }
+            }
+            if (combat) {
+                combatYawO = mountSmoothedYaw;
+                hadCombatLastTick = true;
+            } else {
+                hadCombatLastTick = false;
+                combatYawO = Float.NaN;
             }
         }
 

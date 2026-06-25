@@ -10,6 +10,7 @@ public final class IntegrationRegistry {
 
     private static boolean controllable;
     private static boolean shoulderSurfing;
+    private static boolean epicFight;
     private static boolean resolved = false;
 
     private IntegrationRegistry() {}
@@ -21,12 +22,14 @@ public final class IntegrationRegistry {
         ModList mods = ModList.get();
         controllable    = mods.isLoaded("controllable");
         shoulderSurfing = mods.isLoaded("shouldersurfing");
+        epicFight       = mods.isLoaded("epicfight");
 
-        LOGGER.info("Companion mods: Controllable:{} SSR:{}", controllable, shoulderSurfing);
+        LOGGER.info("Companion mods: Controllable:{} SSR:{} EpicFight:{}", controllable, shoulderSurfing, epicFight);
     }
 
     public static boolean isControllable()    { ensure(); return controllable; }
     public static boolean isShoulderSurfing() { ensure(); return shoulderSurfing; }
+    public static boolean isEpicFight()       { ensure(); return epicFight; }
 
     private static void ensure() { if (!resolved) resolve(); }
 }
