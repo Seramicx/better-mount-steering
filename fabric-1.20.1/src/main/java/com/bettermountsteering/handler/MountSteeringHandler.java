@@ -1,10 +1,12 @@
 package com.bettermountsteering.handler;
 
 import com.bettermountsteering.BetterMountSteeringConfig;
+import com.bettermountsteering.api.MountCameraSource;
+import com.bettermountsteering.api.MountSteeringApi;
 import com.bettermountsteering.compat.BetterCombatHelper;
 import com.bettermountsteering.compat.ControllableHelper;
-import com.bettermountsteering.compat.ShoulderSurfingHelper;
 import com.bettermountsteering.compat.WizardsHelper;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.Input;
@@ -74,17 +76,23 @@ public class MountSteeringHandler {
         return v instanceof Mob mob && mob.getControllingPassenger() == player;
     }
 
+    @Nullable
+    private static MountCameraSource activeCameraSource() {
+        MountCameraSource source = MountSteeringApi.getCameraSource();
+        return source != null && source.isActive() ? source : null;
+    }
+
     private static boolean isCombatActive(LocalPlayer player) {
         if (player.swinging) return true;
         if (BetterCombatHelper.isAttackInProgress()) return true;
-        if (WizardsHelper.isCasting()) return true;
+        if (WizardsHelper.isCasting() || WizardsHelper.isCastLatchActive()) return true;
         if (player.isBlocking()) return true;
         return player.isUsingItem();
     }
 
     private static float smoothAngle(float from, float to, float factor) {
         float delta = Mth.wrapDegrees(to - from);
-        return from + delta * factor;
+        return Mth.wrapDegrees(from + delta * factor);
     }
 
     private static float[] readDirectionalInput(Input input) {
@@ -137,10 +145,10 @@ public class MountSteeringHandler {
             return;
         }
 
-        boolean ssr = ShoulderSurfingHelper.isShoulderSurfingActive();
+        MountCameraSource source = activeCameraSource();
         float camYaw;
-        if (ssr) {
-            camYaw = ShoulderSurfingHelper.getCameraYaw();
+        if (source != null) {
+            camYaw = source.yaw();
         } else {
             camYaw = INSTANCE.decoupleActive ? INSTANCE.decoupledCameraYaw : player.getYRot();
         }
@@ -152,16 +160,6 @@ public class MountSteeringHandler {
             mount.setYRot(target);
         }
         INSTANCE.mountSmoothedYaw = target;
-
-        // Ranged weapons fire along the player's pitch; without this the shot keeps the mount-steering pitch
-        if (ssr && isRangedAimActive(player)) {
-            player.setXRot(ShoulderSurfingHelper.getCameraXRot());
-        }
-    }
-
-    private static boolean isRangedAimActive(LocalPlayer player) {
-        if (WizardsHelper.isCasting()) return true;
-        return player.isUsingItem();
     }
 
     private boolean handleMountRotate(LocalPlayer player, Input input) {
@@ -182,9 +180,9 @@ public class MountSteeringHandler {
             float[] dir = readDirectionalInput(input);
             float magnitude = Mth.sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
             boolean userIsMoving = magnitude >= 0.01F;
-            boolean ssrActive = ShoulderSurfingHelper.isShoulderSurfingActive();
+            boolean externalCamera = activeCameraSource() != null;
 
-            if (ssrActive && userIsMoving) {
+            if (externalCamera && userIsMoving) {
                 mountRotateActive = false;
                 decoupleActive = false;
                 decoupleTransitioning = false;
@@ -208,9 +206,9 @@ public class MountSteeringHandler {
         float rawMagnitude = Mth.sqrt(rawForward * rawForward + rawStrafe * rawStrafe);
         boolean combatIdle = combat && rawMagnitude < 0.01F;
         if (freshTpsBack && !decoupleActive) {
-            boolean ssrSeed = ShoulderSurfingHelper.isShoulderSurfingActive();
-            decoupledCameraYaw  = ssrSeed ? ShoulderSurfingHelper.getCameraYaw()  : player.getYRot();
-            decoupledCameraXRot = ssrSeed ? ShoulderSurfingHelper.getCameraXRot() : player.getXRot();
+            MountCameraSource seedSource = activeCameraSource();
+            decoupledCameraYaw  = seedSource != null ? seedSource.yaw()  : player.getYRot();
+            decoupledCameraXRot = seedSource != null ? seedSource.xRot() : player.getXRot();
             if (Float.isNaN(mountSmoothedYaw)) mountSmoothedYaw = decoupledCameraYaw;
             decoupleActive = true;
         }
@@ -222,7 +220,10 @@ public class MountSteeringHandler {
                 rawMagnitude = 0F;
             } else if (idleBehavior() == BetterMountSteeringConfig.IdleBehavior.HOLD_DIRECTION
                     && decoupleActive && !Float.isNaN(mountSmoothedYaw)) {
+                Mob mount = (Mob) player.getVehicle();
                 player.setYRot(mountSmoothedYaw);
+                mount.setYRot(mountSmoothedYaw);
+                mount.yBodyRot = mountSmoothedYaw;
                 mountInputMagnitude = 0F;
                 mountInputForward = 0F;
                 mountInputStrafe = 0F;
@@ -244,11 +245,11 @@ public class MountSteeringHandler {
             }
         }
 
-        boolean ssr = ShoulderSurfingHelper.isShoulderSurfingActive();
-        float sourceYaw  = ssr ? ShoulderSurfingHelper.getCameraYaw()  : player.getYRot();
-        float sourceXRot = ssr ? ShoulderSurfingHelper.getCameraXRot() : player.getXRot();
+        MountCameraSource source = activeCameraSource();
+        float sourceYaw  = source != null ? source.yaw()  : player.getYRot();
+        float sourceXRot = source != null ? source.xRot() : player.getXRot();
 
-        if (ssr) {
+        if (source != null) {
             decoupledCameraYaw = sourceYaw;
             decoupledCameraXRot = sourceXRot;
             if (decoupleTransitioning) {
@@ -282,6 +283,13 @@ public class MountSteeringHandler {
         float turnFactor = combat ? 1.0F : mountTurnSpeed();
         mountSmoothedYaw = smoothAngle(mountSmoothedYaw, bodyYaw, turnFactor);
         player.setYRot(mountSmoothedYaw);
+        Mob mount = (Mob) player.getVehicle();
+        mount.setYRot(mountSmoothedYaw);
+        mount.yBodyRot = mountSmoothedYaw;
+        if (freshMount) {
+            mount.yRotO = mountSmoothedYaw;
+            mount.yBodyRotO = mountSmoothedYaw;
+        }
 
         float modMagnitude = Mth.sqrt(input.forwardImpulse * input.forwardImpulse
                 + input.leftImpulse * input.leftImpulse);
@@ -338,9 +346,10 @@ public class MountSteeringHandler {
         }
 
         if (decoupleActive && decoupleTransitioning) {
-            if (ShoulderSurfingHelper.isShoulderSurfingActive()) {
-                decoupledCameraYaw = ShoulderSurfingHelper.getCameraYaw();
-                decoupledCameraXRot = ShoulderSurfingHelper.getCameraXRot();
+            MountCameraSource source = activeCameraSource();
+            if (source != null) {
+                decoupledCameraYaw = source.yaw();
+                decoupledCameraXRot = source.xRot();
             }
             float currentYRot = player.getYRot();
             float dy = Mth.wrapDegrees(decoupledCameraYaw - currentYRot);
@@ -351,7 +360,9 @@ public class MountSteeringHandler {
                 player.setXRot(decoupledCameraXRot);
                 player.yBodyRot = decoupledCameraYaw;
                 player.yHeadRot = decoupledCameraYaw;
-                ShoulderSurfingHelper.setLastMovedYRot(decoupledCameraYaw);
+                if (source != null) {
+                    source.onDecoupleEnd(decoupledCameraYaw);
+                }
                 decoupleActive = false;
                 decoupleTransitioning = false;
             } else {

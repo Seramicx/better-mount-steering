@@ -95,4 +95,16 @@ public final class WizardsHelper {
         if (!isLoaded()) return false;
         return isCastingLive() || isCastKeyDown();
     }
+
+    private static final long CAST_LATCH_MS = 500L;
+    private static long castSignalMs = 0L;
+
+    // Instant casts (Shadowstep etc.) resolve within the tick and never report isCastingSpell, so latch the turn
+    public static void signalCast() {
+        castSignalMs = System.currentTimeMillis();
+    }
+
+    public static boolean isCastLatchActive() {
+        return (System.currentTimeMillis() - castSignalMs) < CAST_LATCH_MS;
+    }
 }

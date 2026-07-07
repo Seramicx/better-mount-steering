@@ -14,8 +14,7 @@
         "MixinLocalPlayerInputHook",
         "MixinLocalPlayerInputOverride",
         "MixinMouseHandlerProcessing",
-        "MixinSsrSuppressFollowDuringMountRotate",
-        "MixinSsrSuppressTurnSnapback"
+        "MixinSpellEngineInstantCastTurn"
     ],
     "injectors": {
         "defaultRequire": 1

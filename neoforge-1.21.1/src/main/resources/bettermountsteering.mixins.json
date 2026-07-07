@@ -10,10 +10,9 @@
     "client": [
         "MixinCameraDecouple",
         "MixinControllableCameraTurn",
+        "MixinIronsInstantCastTurn",
         "MixinLocalPlayerInputOverride",
-        "MixinMouseHandlerProcessing",
-        "MixinSsrSuppressFollowDuringMountRotate",
-        "MixinSsrSuppressTurnSnapback"
+        "MixinMouseHandlerProcessing"
     ],
     "injectors": {
         "defaultRequire": 1

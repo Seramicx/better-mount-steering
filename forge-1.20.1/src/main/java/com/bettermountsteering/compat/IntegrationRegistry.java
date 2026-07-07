@@ -11,7 +11,6 @@ public final class IntegrationRegistry {
     private static boolean betterLockOn;
     private static boolean epicFight;
     private static boolean controllable;
-    private static boolean shoulderSurfing;
     private static boolean resolved = false;
 
     private IntegrationRegistry() {}
@@ -24,17 +23,15 @@ public final class IntegrationRegistry {
         betterLockOn    = mods.isLoaded("betterlockon");
         epicFight       = mods.isLoaded("epicfight");
         controllable    = mods.isLoaded("controllable");
-        shoulderSurfing = mods.isLoaded("shouldersurfing");
 
         LOGGER.info(
-            "Companion mods: BLO:{} EpicFight:{} Controllable:{} SSR:{}",
-            betterLockOn, epicFight, controllable, shoulderSurfing);
+            "Companion mods: BLO:{} EpicFight:{} Controllable:{}",
+            betterLockOn, epicFight, controllable);
     }
 
     public static boolean isBetterLockOn()    { ensure(); return betterLockOn; }
     public static boolean isEpicFight()       { ensure(); return epicFight; }
     public static boolean isControllable()    { ensure(); return controllable; }
-    public static boolean isShoulderSurfing() { ensure(); return shoulderSurfing; }
 
     private static void ensure() { if (!resolved) resolve(); }
 }

@@ -61,7 +61,6 @@ repositories {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${forge_1192_minecraft_version}-${forge_1192_version}"
-    compileOnly fg.deobf("curse.maven:shoulder-surfing-reloaded-243190:7720588")
     compileOnly fg.deobf("curse.maven:controllable-317269:4445137")
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }

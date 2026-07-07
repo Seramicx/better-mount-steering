@@ -10,13 +10,11 @@
     ],
     "client": [
         "MixinCameraDecouple",
+        "MixinCgmGunFireLatch",
         "MixinControllableCameraTurn",
+        "MixinIronsCastLatch",
         "MixinLocalPlayerInputOverride",
-        "MixinMouseHandlerProcessing",
-        "MixinSsrSuppressFollowDuringMountRotate",
-        "MixinSsrSuppressTurnSnapback",
-        "MixinSsrSuppressPassengerConstraint",
-        "MixinUseItemFaceCameraOnMount"
+        "MixinMouseHandlerProcessing"
     ],
     "injectors": {
         "defaultRequire": 1

@@ -109,4 +109,21 @@ public final class IronSpellsHelper {
         } catch (Throwable ignored) {}
         return false;
     }
+
+    public static boolean isIronsItem(net.minecraft.world.item.Item item) {
+        if (!isLoaded() || item == null) return false;
+        return item.getClass().getName().startsWith("io.redspace.ironsspellbooks");
+    }
+
+    private static final long CAST_LATCH_MS = 500L;
+    private static long castSignalMs = 0L;
+
+    // Instant casts (Firebolt) resolve within the tick and never set isCasting, so latch to hold the auto-turn
+    public static void signalCast() {
+        castSignalMs = System.currentTimeMillis();
+    }
+
+    public static boolean isCastLatchActive() {
+        return (System.currentTimeMillis() - castSignalMs) < CAST_LATCH_MS;
+    }
 }
