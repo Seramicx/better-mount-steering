@@ -7,7 +7,7 @@ plugins {
     id 'org.spongepowered.mixin' version '0.7.+'
 }
 
-def forge_1192_mod_version = '1.0.0'
+def forge_1192_mod_version = '1.0.1'
 
 version = forge_1192_mod_version
 group = maven_group
