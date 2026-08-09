@@ -12,8 +12,10 @@ import com.bettermountsteering.compat.TaczHelper;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
@@ -44,6 +46,9 @@ public class MountSteeringHandler {
 
     private volatile boolean wasOnMountLastTick = false;
 
+    private static final long FIRE_LATCH_MS = 500L;
+    private volatile long fireSignalMs = 0L;
+
     private float combatYawO = Float.NaN;
     private boolean hadCombatLastTick = false;
     private boolean wasCombatLastTick = false;
@@ -69,6 +74,34 @@ public class MountSteeringHandler {
     public static void addCameraDelta(float dy, float dx) {
         INSTANCE.decoupledCameraYaw  = Mth.wrapDegrees(INSTANCE.decoupledCameraYaw + dy);
         INSTANCE.decoupledCameraXRot = Mth.clamp(INSTANCE.decoupledCameraXRot + dx, -90F, 90F);
+    }
+
+    // Firing an already-loaded crossbow never sets isUsingItem, so the auto-turn's combat check misses it.
+    // Latch instead of writing the yaw here: the combat branch keeps the strafe impulse, so the mount faces
+    // the camera without the movement veering off, and combatJustEnded snaps the body back with no drift
+    public static void snapToCameraNow(LocalPlayer player) {
+        if (!BetterMountSteeringConfig.AUTO_FACE_ON_COMBAT.get()) return;
+        if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
+        if (EpicFightHelper.isLockOnTargeting()) return;
+        if (!isOnMountedMob(player)) return;
+
+        INSTANCE.fireSignalMs = System.currentTimeMillis();
+
+        MountCameraSource source = activeCameraSource();
+        float camYaw;
+        if (source != null) {
+            camYaw = source.yaw();
+        } else {
+            camYaw = INSTANCE.decoupleActive ? INSTANCE.decoupledCameraYaw : player.getYRot();
+        }
+
+        // ServerboundUseItemPacket carries no rotation, so a charged crossbow fires along whatever yaw was
+        // last synced. While decoupled that's the mount body yaw, not the camera
+        float target = Mth.wrapDegrees(camYaw);
+        ClientPacketListener conn = Minecraft.getInstance().getConnection();
+        if (conn != null) {
+            conn.send(new ServerboundMovePlayerPacket.Rot(target, player.getXRot(), player.isOnGround()));
+        }
     }
 
     private float mountTurnSpeed() {
@@ -100,6 +133,7 @@ public class MountSteeringHandler {
         if (TaczHelper.isAimingOrFiring()) return true;
         if (GunModHelper.isGunFiring()) return true;
         if (player.isBlocking()) return true;
+        if ((System.currentTimeMillis() - INSTANCE.fireSignalMs) < FIRE_LATCH_MS) return true;
         return player.isUsingItem();
     }
 
@@ -282,7 +316,8 @@ public class MountSteeringHandler {
                 + input.leftImpulse * input.leftImpulse);
         float magnitude = Math.min(rawMagnitude, modMagnitude);
         if (combat) {
-            float slow = combatIdle ? 0F : 0.5F;
+            float slow = combatIdle ? 0F
+                    : (BetterMountSteeringConfig.SLOW_MOUNT_ON_COMBAT.get() ? 0.5F : 1.0F);
             input.forwardImpulse = rawForward * slow;
             input.leftImpulse = rawStrafe * slow;
             mountInputMagnitude = magnitude * slow;
@@ -313,6 +348,7 @@ public class MountSteeringHandler {
         if (castNow && !wasCastKeyDownLastTick) IronSpellsHelper.signalCast();
         wasCastKeyDownLastTick = castNow;
 
+        if (!BetterMountSteeringConfig.AUTO_FACE_ON_COMBAT.get()) return;
         if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
         if (EpicFightHelper.isLockOnTargeting()) return;
         if (!isOnMountedMob(player)) {

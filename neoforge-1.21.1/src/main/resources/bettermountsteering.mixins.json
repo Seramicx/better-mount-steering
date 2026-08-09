@@ -4,12 +4,15 @@
     "package": "com.bettermountsteering.mixin",
     "compatibilityLevel": "JAVA_21",
     "mixins": [
+        "MixinCrossbowMountedHeadYaw",
         "MixinEntityTurnDecouple",
-        "MixinLivingEntityRiddenInterp"
+        "MixinLivingEntityRiddenInterp",
+        "MixinScorchedBeamIgnoreMount"
     ],
     "client": [
         "MixinCameraDecouple",
         "MixinControllableCameraTurn",
+        "MixinCrossbowMountFaceCamera",
         "MixinIronsInstantCastTurn",
         "MixinLocalPlayerInputOverride",
         "MixinMouseHandlerProcessing"

@@ -5,6 +5,8 @@
     "refmap": "bettermountsteering.refmap.json",
     "compatibilityLevel": "JAVA_17",
     "mixins": [
+        "MixinCgmProjectileIgnoreMount",
+        "MixinCrossbowMountedHeadYaw",
         "MixinEntityTurnDecouple",
         "MixinLivingEntityRiddenInterp"
     ],
@@ -12,6 +14,7 @@
         "MixinCameraDecouple",
         "MixinCgmGunFireLatch",
         "MixinControllableCameraTurn",
+        "MixinCrossbowMountFaceCamera",
         "MixinIronsCastLatch",
         "MixinLocalPlayerInputOverride",
         "MixinMouseHandlerProcessing"

@@ -1,12 +1,8 @@
 .gradle/
 build/
-out/
+bin/
+run/
 .idea/
 *.iml
-*.iws
-run/
-run-server/
-run-client/
-logs/
-crash-reports/
-bin/
+hs_err_pid*.log
+replay_pid*.log
