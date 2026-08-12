@@ -23,7 +23,7 @@ public class BetterMountSteeringMod {
         context.getModEventBus().addListener(this::onClientSetup);
 
         MinecraftForge.EVENT_BUS.register(MountSteeringHandler.getInstance());
-        LOGGER.info("Seramicx's Better Mount Steering v1.0.0 loaded.");
+        LOGGER.info("Seramicx's Better Mount Steering v1.0.9 loaded.");
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
