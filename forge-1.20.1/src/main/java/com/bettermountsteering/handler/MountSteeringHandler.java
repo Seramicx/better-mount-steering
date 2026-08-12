@@ -387,9 +387,9 @@ public class MountSteeringHandler {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onClientTickStartCombatSnap(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.START) return;
-        if (!BetterMountSteeringConfig.AUTO_FACE_ON_COMBAT.get()) return;
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
+        if (!BetterMountSteeringConfig.AUTO_FACE_ON_COMBAT.get()) return;
         if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
         if (EpicFightHelper.isLockOnTargeting()) return;
         if (!isOnMountedMob(player)) {

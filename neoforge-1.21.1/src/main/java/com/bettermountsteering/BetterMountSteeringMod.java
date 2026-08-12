@@ -24,7 +24,7 @@ public class BetterMountSteeringMod {
         modBus.addListener(this::onClientSetup);
 
         NeoForge.EVENT_BUS.register(MountSteeringHandler.getInstance());
-        LOGGER.info("Seramicx's Better Mount Steering v1.0.4 loaded (NeoForge 1.21.1).");
+        LOGGER.info("Seramicx's Better Mount Steering v1.0.5 loaded (NeoForge 1.21.1).");
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
