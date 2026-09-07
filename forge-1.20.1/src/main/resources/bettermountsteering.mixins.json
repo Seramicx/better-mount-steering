@@ -14,9 +14,11 @@
         "MixinCameraDecouple",
         "MixinControllableCameraTurn",
         "MixinCrossbowMountFaceCamera",
+        "MixinMusketMountFaceCamera",
         "MixinIronsInstantCastTurn",
         "MixinLocalPlayerInputOverride",
-        "MixinMouseHandlerProcessing"
+        "MixinMouseHandlerProcessing",
+        "MixinWizardryCastTurn"
     ],
     "injectors": {
         "defaultRequire": 1

@@ -5,6 +5,7 @@ import com.bettermountsteering.api.MountCameraSource;
 import com.bettermountsteering.api.MountSteeringApi;
 import com.bettermountsteering.compat.BetterCombatHelper;
 import com.bettermountsteering.compat.ControllableHelper;
+import com.bettermountsteering.compat.WizardryReduxHelper;
 import com.bettermountsteering.compat.WizardsHelper;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.CameraType;
@@ -118,6 +119,7 @@ public class MountSteeringHandler {
         if (player.swinging) return true;
         if (BetterCombatHelper.isAttackInProgress()) return true;
         if (WizardsHelper.isCasting() || WizardsHelper.isCastLatchActive()) return true;
+        if (WizardryReduxHelper.isCastLatchActive()) return true;
         if (player.isBlocking()) return true;
         if ((System.currentTimeMillis() - INSTANCE.fireSignalMs) < FIRE_LATCH_MS) return true;
         return player.isUsingItem();

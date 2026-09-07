@@ -12,6 +12,8 @@ public final class GunModHelper {
     private static Field scorchedShooting;
     private static Method cgmGet;
     private static Field cgmShooting;
+    private static Method jegGet;
+    private static Method jegShooting;
 
     private static void resolve() {
         if (resolved) return;
@@ -28,6 +30,11 @@ public final class GunModHelper {
             cgmShooting = c.getDeclaredField("shooting");
             cgmShooting.setAccessible(true);
         } catch (Throwable ignored) {}
+        try {
+            Class<?> c = Class.forName("ttv.migami.jeg.client.handler.ShootingHandler");
+            jegGet = c.getMethod("get");
+            jegShooting = c.getMethod("isShooting");
+        } catch (Throwable ignored) {}
     }
 
     public static boolean isGunFiring() {
@@ -40,6 +47,11 @@ public final class GunModHelper {
         if (cgmGet != null && cgmShooting != null) {
             try {
                 if (cgmShooting.getBoolean(cgmGet.invoke(null))) return true;
+            } catch (Throwable ignored) {}
+        }
+        if (jegGet != null && jegShooting != null) {
+            try {
+                if ((Boolean) jegShooting.invoke(jegGet.invoke(null))) return true;
             } catch (Throwable ignored) {}
         }
         return false;

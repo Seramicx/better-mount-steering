@@ -15,6 +15,7 @@
         "MixinCgmGunFireLatch",
         "MixinControllableCameraTurn",
         "MixinCrossbowMountFaceCamera",
+        "MixinMusketMountFaceCamera",
         "MixinIronsCastLatch",
         "MixinLocalPlayerInputOverride",
         "MixinMouseHandlerProcessing"

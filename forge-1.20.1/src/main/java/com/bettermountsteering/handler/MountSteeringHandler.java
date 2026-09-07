@@ -12,6 +12,7 @@ import com.bettermountsteering.compat.IntegrationRegistry;
 import com.bettermountsteering.compat.IronSpellsHelper;
 import com.bettermountsteering.compat.SuperbWarfareHelper;
 import com.bettermountsteering.compat.TaczHelper;
+import com.bettermountsteering.compat.WizardryReduxHelper;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -151,6 +152,7 @@ public class MountSteeringHandler {
         if (GunModHelper.isGunFiring()) return true;
         if (SuperbWarfareHelper.isAimingOrFiring()) return true;
         if (IronSpellsHelper.isCasting() || IronSpellsHelper.anyCastKeymapDown() || IronSpellsHelper.isCastLatchActive()) return true;
+        if (WizardryReduxHelper.isCastLatchActive()) return true;
         if (EpicFightHelper.isAttackAnimActive(player)) return true;
         if (player.isBlocking()) return true;
         if ((System.currentTimeMillis() - INSTANCE.fireSignalMs) < FIRE_LATCH_MS) return true;

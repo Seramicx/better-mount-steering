@@ -13,7 +13,9 @@
         "MixinCameraDecouple",
         "MixinControllableCameraTurn",
         "MixinCrossbowMountFaceCamera",
+        "MixinMusketMountFaceCamera",
         "MixinIronsInstantCastTurn",
+        "MixinJegShootTurn",
         "MixinLocalPlayerInputOverride",
         "MixinMouseHandlerProcessing"
     ],

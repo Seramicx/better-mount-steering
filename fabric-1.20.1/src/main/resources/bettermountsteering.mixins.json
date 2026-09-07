@@ -13,10 +13,12 @@
         "MixinCameraDecouple",
         "MixinControllableCameraTurn",
         "MixinCrossbowMountFaceCamera",
+        "MixinMusketMountFaceCamera",
         "MixinLocalPlayerInputHook",
         "MixinLocalPlayerInputOverride",
         "MixinMouseHandlerProcessing",
-        "MixinSpellEngineInstantCastTurn"
+        "MixinSpellEngineInstantCastTurn",
+        "MixinWizardryCastTurn"
     ],
     "injectors": {
         "defaultRequire": 1
