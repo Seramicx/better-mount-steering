@@ -20,6 +20,7 @@ Decoupled mount camera and smoother lock-on body turns while mounted. Forge 1.19
 
 - Mouse moves the camera separately from the mount in third person; WASD steers the mount toward where you're looking. No Better Third Person required.
 - With Shoulder Surfing Reloaded, stops SSR from dragging the camera toward mount steering while decoupled.
+- With Better Third Person, this mod steers the mount toward Better Third Person's camera and Better Third Person no longer turns the mount itself (Forge 1.20.1, NeoForge, Fabric).
 - Controllable: right stick moves the decoupled mount camera like the mouse.
 - Attacking, blocking, aiming or casting while mounted turns you to the camera first, so shots go where you look. This covers any mod's gun, staff or spell that fires on right click or with its own packet.
 
@@ -55,7 +56,7 @@ Forge and NeoForge also have:
 | Fabric | 1.20.1 | Fabric Loader 0.15+, Fabric API, Forge Config API Port |
 | Fabric | 1.21.1 | Fabric Loader 0.16+, Fabric API, Forge Config API Port |
 
-Optional: Better Lockon, Epic Fight, Shoulder Surfing Reloaded, Controllable (varies by loader).
+Optional: Better Lockon, Epic Fight, Shoulder Surfing Reloaded, Better Third Person, Controllable (varies by loader).
 
 ## Install
 

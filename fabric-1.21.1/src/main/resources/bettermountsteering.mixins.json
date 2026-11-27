@@ -10,6 +10,7 @@
         "MixinLivingEntityRiddenInterp"
     ],
     "client": [
+        "MixinBetterThirdPersonMountYaw",
         "MixinModPacketMountFaceCamera",
         "MixinCameraDecouple",
         "MixinControllableCameraTurn",

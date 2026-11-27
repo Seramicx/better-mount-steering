@@ -19,7 +19,8 @@
         "MixinIronsInstantCastTurn",
         "MixinLocalPlayerInputOverride",
         "MixinMouseHandlerProcessing",
-        "MixinWizardryCastTurn"
+        "MixinWizardryCastTurn",
+        "MixinBetterThirdPersonMountYaw"
     ],
     "injectors": {
         "defaultRequire": 1

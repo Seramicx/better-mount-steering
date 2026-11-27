@@ -127,6 +127,10 @@ public class MountSteeringHandler {
         return v instanceof Mob mob && mob.getControllingPassenger() == player;
     }
 
+    public static boolean hasExternalCamera() {
+        return activeCameraSource() != null;
+    }
+
     @Nullable
     private static MountCameraSource activeCameraSource() {
         MountCameraSource source = MountSteeringApi.getCameraSource();

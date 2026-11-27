@@ -1,6 +1,7 @@
 package com.bettermountsteering;
 
 import com.bettermountsteering.compat.IntegrationRegistry;
+import com.bettermountsteering.compat.TaczHelper;
 import com.bettermountsteering.handler.MountSteeringHandler;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -24,6 +25,7 @@ public class BetterMountSteeringMod {
         modBus.addListener(this::onClientSetup);
 
         NeoForge.EVENT_BUS.register(MountSteeringHandler.getInstance());
+        TaczHelper.registerShootListener();
         LOGGER.info("Seramicx's Better Mount Steering v1.0.5 loaded (NeoForge 1.21.1).");
     }
 

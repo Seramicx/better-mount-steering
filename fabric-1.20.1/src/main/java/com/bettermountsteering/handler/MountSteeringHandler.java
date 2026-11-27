@@ -3,6 +3,7 @@ package com.bettermountsteering.handler;
 import com.bettermountsteering.BetterMountSteeringConfig;
 import com.bettermountsteering.api.MountCameraSource;
 import com.bettermountsteering.api.MountSteeringApi;
+import com.bettermountsteering.compat.BetterThirdPersonHelper;
 import com.bettermountsteering.compat.BetterCombatHelper;
 import com.bettermountsteering.compat.ControllableHelper;
 import com.bettermountsteering.compat.WizardryReduxHelper;
@@ -119,10 +120,19 @@ public class MountSteeringHandler {
         return v instanceof Mob mob && mob.getControllingPassenger() == player;
     }
 
+    public static boolean hasExternalCamera() {
+        return activeCameraSource() != null;
+    }
+
     @Nullable
     private static MountCameraSource activeCameraSource() {
         MountCameraSource source = MountSteeringApi.getCameraSource();
-        return source != null && source.isActive() ? source : null;
+        if (source != null && source.isActive()) return source;
+        return BetterThirdPersonHelper.SOURCE.isActive() ? BetterThirdPersonHelper.SOURCE : null;
+    }
+
+    public static boolean isSteeringMount(LocalPlayer player) {
+        return isOnMountedMob(player) && Minecraft.getInstance().options.getCameraType() == CameraType.THIRD_PERSON_BACK;
     }
 
     private static boolean isCombatActive(LocalPlayer player) {
