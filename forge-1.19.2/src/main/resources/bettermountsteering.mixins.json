@@ -11,6 +11,7 @@
         "MixinLivingEntityRiddenInterp"
     ],
     "client": [
+        "MixinModPacketMountFaceCamera",
         "MixinCameraDecouple",
         "MixinCgmGunFireLatch",
         "MixinControllableCameraTurn",

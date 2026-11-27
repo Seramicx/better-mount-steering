@@ -8,10 +8,10 @@ Decoupled mount camera and smoother lock-on body turns while mounted. Forge 1.19
 
 | Loader | Minecraft | Mod version |
 |---|---|---|
-| Forge | 1.19.2 | 1.0.0 |
-| Forge | 1.20.1 | 1.0.5 |
-| NeoForge | 1.21.1 | 1.0.5 |
-| Fabric | 1.20.1 | 1.0.0 |
+| Forge | 1.19.2 | 1.0.4 |
+| Forge | 1.20.1 | 1.1.1 |
+| NeoForge | 1.21.1 | 1.0.7 |
+| Fabric | 1.20.1 | 1.0.5 |
 | Fabric | 1.21.1 | 1.0.5 |
 
 ## Features
@@ -21,6 +21,7 @@ Decoupled mount camera and smoother lock-on body turns while mounted. Forge 1.19
 - Mouse moves the camera separately from the mount in third person; WASD steers the mount toward where you're looking. No Better Third Person required.
 - With Shoulder Surfing Reloaded, stops SSR from dragging the camera toward mount steering while decoupled.
 - Controllable: right stick moves the decoupled mount camera like the mouse.
+- Attacking, blocking, aiming or casting while mounted turns you to the camera first, so shots go where you look. This covers any mod's gun, staff or spell that fires on right click or with its own packet.
 
 ### Forge 1.20.1 and NeoForge 1.21.1
 
@@ -34,11 +35,15 @@ Decoupled mount camera and smoother lock-on body turns while mounted. Forge 1.19
 `config/bettermountsteering-client.toml`:
 
 - `mountTurnSpeed` - how fast the body catches the camera while steering (default `0.25`)
+- `autoFaceOnCombat` - turn to the camera when you attack, block, aim or cast while mounted (default `true`)
+- `slowMountOnCombat` - half mount speed during combat (default `true`)
+- `idleBehavior` - `HOLD_DIRECTION` (default) keeps the body's heading when you stop, `FACE_CAMERA` turns it back to the camera
 
 Forge and NeoForge also have:
 
 - `smoothLockOnMountTurn` - smooth BLO mount lock-on (default `true`; `false` = vanilla BLO snap)
 - `bloLockOnTurnSmoothness` - lock-on turn smoothness (default `0.5`)
+- `tpsAimLingerTicks` - how long Epic Fight's aim camera stays after you stop aiming on a mount (default `0`)
 
 ## Requires
 

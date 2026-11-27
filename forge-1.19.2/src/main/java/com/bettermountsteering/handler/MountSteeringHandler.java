@@ -79,11 +79,11 @@ public class MountSteeringHandler {
     // Firing an already-loaded crossbow never sets isUsingItem, so the auto-turn's combat check misses it.
     // Latch instead of writing the yaw here: the combat branch keeps the strafe impulse, so the mount faces
     // the camera without the movement veering off, and combatJustEnded snaps the body back with no drift
-    public static void snapToCameraNow(LocalPlayer player) {
-        if (!BetterMountSteeringConfig.AUTO_FACE_ON_COMBAT.get()) return;
-        if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
-        if (EpicFightHelper.isLockOnTargeting()) return;
-        if (!isOnMountedMob(player)) return;
+    public static float snapToCameraNow(LocalPlayer player) {
+        if (!BetterMountSteeringConfig.AUTO_FACE_ON_COMBAT.get()) return Float.NaN;
+        if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) return Float.NaN;
+        if (EpicFightHelper.isLockOnTargeting()) return Float.NaN;
+        if (!isOnMountedMob(player)) return Float.NaN;
 
         INSTANCE.fireSignalMs = System.currentTimeMillis();
 
@@ -102,6 +102,16 @@ public class MountSteeringHandler {
         if (conn != null) {
             conn.send(new ServerboundMovePlayerPacket.Rot(target, player.getXRot(), player.isOnGround()));
         }
+        return target;
+    }
+
+
+    // Mod guns and spells fire with their own packets, which carry no rotation, so turn to the camera first
+    public static void beforeModPacket() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !mc.isSameThread()) return;
+        if (!mc.options.keyUse.isDown() && !mc.options.keyAttack.isDown()) return;
+        snapToCameraNow(mc.player);
     }
 
     private float mountTurnSpeed() {

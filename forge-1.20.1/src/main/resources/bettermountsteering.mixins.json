@@ -11,6 +11,7 @@
         "MixinScorchedBeamIgnoreMount"
     ],
     "client": [
+        "MixinModPacketMountFaceCamera",
         "MixinCameraDecouple",
         "MixinControllableCameraTurn",
         "MixinCrossbowMountFaceCamera",
