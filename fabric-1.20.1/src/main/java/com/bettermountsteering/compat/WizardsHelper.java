@@ -17,6 +17,7 @@ public final class WizardsHelper {
 
     private static Boolean spellEnginePresent;
     private static Method isCastingSpellMethod;
+    private static Method getSpellCastProgressMethod;
     private static boolean castMethodResolved;
 
     private static Field hotbarInstanceField;
@@ -40,8 +41,15 @@ public final class WizardsHelper {
         try {
             Class<?> iface = Class.forName("net.spell_engine.internals.casting.SpellCasterClient");
             isCastingSpellMethod = iface.getMethod("isCastingSpell");
+            return;
+        } catch (Throwable ignored) {
+        }
+        // 1.10 folded SpellCasterClient into SpellCaster.Client and dropped isCastingSpell
+        try {
+            Class<?> iface = Class.forName("net.spell_engine.internals.casting.SpellCaster$Client");
+            getSpellCastProgressMethod = iface.getMethod("getSpellCastProgress");
         } catch (Throwable t) {
-            LOGGER.debug("WizardsHelper: isCastingSpell reflection unavailable: {}", t.toString());
+            LOGGER.debug("WizardsHelper: spell cast reflection unavailable: {}", t.toString());
         }
     }
 
@@ -80,12 +88,14 @@ public final class WizardsHelper {
     private static boolean isCastingLive() {
         if (!isLoaded()) return false;
         resolveCastMethod();
-        if (isCastingSpellMethod == null) return false;
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return false;
         try {
-            Object v = isCastingSpellMethod.invoke(player);
-            return v instanceof Boolean && (Boolean) v;
+            if (isCastingSpellMethod != null) {
+                Object v = isCastingSpellMethod.invoke(player);
+                return v instanceof Boolean && (Boolean) v;
+            }
+            return getSpellCastProgressMethod != null && getSpellCastProgressMethod.invoke(player) != null;
         } catch (Throwable ignored) {
             return false;
         }

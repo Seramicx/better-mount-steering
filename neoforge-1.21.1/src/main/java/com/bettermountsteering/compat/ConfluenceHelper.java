@@ -40,6 +40,14 @@ public final class ConfluenceHelper {
     private static void resolveKeys() {
         if (keysResolved) return;
         keysResolved = true;
+        // 1.2.13 folded TerraGuns into the main mod and moved its keys
+        try {
+            Class<?> keys = Class.forName("org.confluence.mod.client.ModKeyBindings");
+            shootKey = readLazyKey(keys, "GUN_SHOOT");
+            aimKey = readLazyKey(keys, "GUN_AIM");
+        } catch (Throwable ignored) {
+        }
+        if (shootKey != null) return;
         try {
             Class<?> keys = Class.forName("org.confluence.terra_guns.client.init.TGKeys");
             shootKey = readLazyKey(keys, "SHOOT");
